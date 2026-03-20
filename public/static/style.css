@@ -1,0 +1,32 @@
+/* BizReady - 경영지원 아카이브 */
+
+/* 사이드바 트랜지션 */
+.sidebar-transition {
+  transition: width 0.3s ease;
+}
+
+/* 로딩 스피너 */
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 배지 */
+.badge-new {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.badge-hot {
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
