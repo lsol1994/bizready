@@ -5,7 +5,10 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [
-    build(),
+    build({
+      outputDir: 'dist',
+      staticPaths: ['/favicon.svg', '/favicon.ico', '/static/*'],
+    }),
     devServer({
       adapter,
       entry: 'src/index.tsx'
