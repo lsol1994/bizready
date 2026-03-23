@@ -17,7 +17,89 @@ login.get('/', (c) => {
 
   return c.render(
     <div class="min-h-screen gradient-bg flex items-center justify-center px-4">
-      <div class="w-full max-w-md">
+
+      {/* ── DEV 전용 URL 도우미 배너 (샌드박스 환경 전용) ── */}
+      <div id="dev-banner" class="hidden fixed top-0 left-0 right-0 z-50 shadow-lg">
+        {/* 상단 타이틀바 */}
+        <div class="bg-amber-500 px-4 py-2 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛠️</span>
+            <span class="font-bold text-white text-sm">개발 환경 도우미</span>
+            <span class="bg-amber-700 text-amber-100 text-xs px-2 py-0.5 rounded-full">DEV ONLY</span>
+          </div>
+          <button onclick="closeBanner()" class="text-white hover:text-amber-200 text-lg font-bold leading-none">×</button>
+        </div>
+
+        {/* 본문 */}
+        <div class="bg-amber-50 border-b-2 border-amber-400 px-4 py-3">
+          {/* 현재 URL 표시 */}
+          <div class="mb-3">
+            <div class="text-xs font-semibold text-amber-800 mb-1">📍 현재 앱 Public URL</div>
+            <div class="flex items-center gap-2">
+              <code id="current-origin" class="flex-1 bg-white border border-amber-300 rounded-lg px-3 py-2 text-sm font-mono text-gray-800 select-all"></code>
+              <button onclick="copyOrigin()" id="copy-btn"
+                class="flex-shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
+                📋 복사
+              </button>
+            </div>
+          </div>
+
+          {/* Supabase 설정 값 */}
+          <div class="mb-3 bg-white border border-amber-200 rounded-xl p-3">
+            <div class="text-xs font-bold text-gray-700 mb-2">📌 Supabase URL Configuration 에 입력할 값</div>
+            <div class="space-y-2">
+              <div>
+                <span class="text-xs text-gray-500 block mb-0.5">Site URL</span>
+                <code id="site-url-val" class="block bg-blue-50 border border-blue-200 rounded px-2 py-1.5 text-xs font-mono text-blue-800 select-all cursor-pointer hover:bg-blue-100"
+                  onclick="copyText(this)"></code>
+              </div>
+              <div>
+                <span class="text-xs text-gray-500 block mb-0.5">Additional Redirect URLs</span>
+                <code id="redirect-url-val" class="block bg-blue-50 border border-blue-200 rounded px-2 py-1.5 text-xs font-mono text-blue-800 select-all cursor-pointer hover:bg-blue-100"
+                  onclick="copyText(this)"></code>
+              </div>
+            </div>
+          </div>
+
+          {/* 경고 메시지 영역 */}
+          <div id="url-warning" class="hidden mb-3 bg-red-50 border border-red-300 rounded-xl p-3">
+            <div class="flex items-start gap-2">
+              <span class="text-red-500 text-base mt-0.5">⚠️</span>
+              <div>
+                <div class="text-xs font-bold text-red-700">URL이 변경됐습니다! Supabase 설정 업데이트 필요</div>
+                <div class="text-xs text-red-600 mt-0.5">이메일 인증 링크 및 OAuth 리다이렉트가 작동하지 않을 수 있습니다.</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 액션 버튼 */}
+          <div class="flex gap-2 flex-wrap">
+            <a id="supabase-url-link"
+              href="https://supabase.com/dashboard/project/blvhpajeaelvmgfglivk/auth/url-configuration"
+              target="_blank"
+              class="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
+              <span>⚡</span> Supabase URL 설정 바로가기
+            </a>
+            <button onclick="copyAllValues()"
+              class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
+              <span>📋</span> 설정값 전체 복사
+            </button>
+            <button onclick="toggleBannerCollapse()" id="collapse-btn"
+              class="flex items-center gap-1.5 bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-2 rounded-lg font-medium transition-colors">
+              <span>🔼</span> 접기
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* DEV 배너 최소화 버튼 (배너 닫은 후 표시) */}
+      <button id="dev-toggle-btn"
+        onclick="openBanner()"
+        class="hidden fixed top-3 right-3 z-50 bg-amber-500 hover:bg-amber-600 text-white text-xs px-3 py-2 rounded-full shadow-lg font-bold transition-colors flex items-center gap-1.5">
+        🛠️ URL 도우미
+      </button>
+
+      <div class="w-full max-w-md" id="main-content">
 
         {/* 로고 */}
         <div class="text-center mb-8">
@@ -217,7 +299,112 @@ login.get('/', (c) => {
         </div>
 
         <p class="text-center text-white/50 text-xs mt-6">© 2025 BizReady. 경영지원 아카이브 서비스</p>
-      </div>
+      </div>{/* /main-content */}
+
+      {/* ── DEV 도우미 스크립트 ── */}
+      <script dangerouslySetInnerHTML={{ __html: `
+;(function devHelper() {
+  // 샌드박스 환경인지 감지 (novita.ai 도메인)
+  const origin   = window.location.origin
+  const isSandbox = origin.includes('novita.ai') || origin.includes('localhost')
+  if (!isSandbox) return  // 프로덕션에서는 완전히 비활성화
+
+  const SUPABASE_URL_CONFIG = 'https://supabase.com/dashboard/project/blvhpajeaelvmgfglivk/auth/url-configuration'
+  const siteUrl     = origin
+  const redirectUrl = origin + '/auth/callback'
+
+  // 배너에 값 채우기
+  document.getElementById('current-origin').textContent   = origin
+  document.getElementById('site-url-val').textContent     = siteUrl
+  document.getElementById('redirect-url-val').textContent = redirectUrl
+
+  // 이전에 저장한 URL과 비교 → 변경 감지
+  const savedOrigin = localStorage.getItem('bizready_last_origin')
+  if (savedOrigin && savedOrigin !== origin) {
+    document.getElementById('url-warning').classList.remove('hidden')
+    console.warn('[BizReady DEV] ⚠️ URL 변경 감지!', '\\n이전:', savedOrigin, '\\n현재:', origin)
+  }
+  localStorage.setItem('bizready_last_origin', origin)
+
+  // 콘솔에도 출력 (개발 시 빠른 확인용)
+  console.log('%c[BizReady DEV] 현재 Public URL', 'color:#f59e0b;font-weight:bold;font-size:14px')
+  console.log('%c' + origin, 'color:#3b82f6;font-size:13px;text-decoration:underline')
+  console.log('%cSupabase Site URL:', 'color:#6b7280', siteUrl)
+  console.log('%cRedirect URL:', 'color:#6b7280', redirectUrl)
+  console.log('%cURL 설정 페이지:', 'color:#6b7280', SUPABASE_URL_CONFIG)
+
+  // 배너 표시
+  document.getElementById('dev-banner').classList.remove('hidden')
+
+  // main-content를 배너 높이만큼 아래로
+  setTimeout(() => {
+    const bannerH = document.getElementById('dev-banner').offsetHeight
+    document.getElementById('main-content').style.paddingTop = (bannerH + 16) + 'px'
+  }, 50)
+
+  // 상태 관리
+  let collapsed = false
+
+  window.closeBanner = function() {
+    document.getElementById('dev-banner').classList.add('hidden')
+    document.getElementById('dev-toggle-btn').classList.remove('hidden')
+    document.getElementById('main-content').style.paddingTop = '0'
+  }
+  window.openBanner = function() {
+    document.getElementById('dev-banner').classList.remove('hidden')
+    document.getElementById('dev-toggle-btn').classList.add('hidden')
+    setTimeout(() => {
+      const bannerH = document.getElementById('dev-banner').offsetHeight
+      document.getElementById('main-content').style.paddingTop = (bannerH + 16) + 'px'
+    }, 50)
+  }
+  window.toggleBannerCollapse = function() {
+    const body = document.querySelector('#dev-banner > div:last-child')
+    const btn  = document.getElementById('collapse-btn')
+    collapsed = !collapsed
+    if (collapsed) {
+      body.classList.add('hidden')
+      btn.innerHTML = '<span>🔽</span> 펼치기'
+      document.getElementById('main-content').style.paddingTop = '44px'
+    } else {
+      body.classList.remove('hidden')
+      btn.innerHTML = '<span>🔼</span> 접기'
+      setTimeout(() => {
+        const bannerH = document.getElementById('dev-banner').offsetHeight
+        document.getElementById('main-content').style.paddingTop = (bannerH + 16) + 'px'
+      }, 50)
+    }
+  }
+
+  window.copyOrigin = async function() {
+    await navigator.clipboard.writeText(origin)
+    const btn = document.getElementById('copy-btn')
+    btn.textContent = '✅ 복사됨!'
+    btn.classList.replace('bg-amber-500', 'bg-green-500')
+    setTimeout(() => {
+      btn.textContent = '📋 복사'
+      btn.classList.replace('bg-green-500', 'bg-amber-500')
+    }, 2000)
+  }
+  window.copyText = async function(el) {
+    await navigator.clipboard.writeText(el.textContent)
+    const orig = el.style.background
+    el.style.background = '#d1fae5'
+    setTimeout(() => { el.style.background = orig }, 1200)
+  }
+  window.copyAllValues = async function() {
+    const text = [
+      '=== BizReady Supabase URL 설정 ===',
+      'Site URL: ' + siteUrl,
+      'Additional Redirect URLs: ' + redirectUrl,
+      '',
+      '설정 페이지: ' + SUPABASE_URL_CONFIG,
+    ].join('\\n')
+    await navigator.clipboard.writeText(text)
+    alert('✅ 설정값이 클립보드에 복사됐습니다!\\n\\nSupabase URL 설정 페이지에서 붙여넣기 해주세요.')
+  }
+})()
+` }} />
 
       <script
         dangerouslySetInnerHTML={{
