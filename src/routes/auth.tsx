@@ -49,7 +49,7 @@ auth.get('/callback', async (c) => {
     const SUPABASE_ANON_KEY = '${SUPABASE_ANON_KEY}'
     const { createClient }  = supabase
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { autoRefreshToken: false, persistSession: true, detectSessionInUrl: true }
+      auth: { autoRefreshToken: false, persistSession: true, detectSessionInUrl: true, flowType: 'implicit' }
     })
 
     // ── 디버그 출력 헬퍼 ──────────────────────────────────
@@ -100,23 +100,7 @@ auth.get('/callback', async (c) => {
       return
     }
 
-    // ── CASE 1: PKCE code (이메일 인증 / 비번 재설정) ────
-    if (code) {
-      log('PKCE code 감지 → exchangeCodeForSession 시도')
-      document.getElementById('desc').textContent = '이메일 인증 처리 중...'
-      try {
-        const { data, error } = await client.auth.exchangeCodeForSession(code)
-        if (error) { showError('코드 교환 실패: ' + error.message); return }
-        log('코드 교환 성공! user=' + data.session?.user?.email)
-        await saveSessionAndRedirect(data.session)
-        return
-      } catch(e) {
-        showError('exchangeCodeForSession 오류: ' + e.message)
-        return
-      }
-    }
-
-    // ── CASE 2: Hash fragment token (OAuth / 구형 이메일 링크) ──
+    // ── CASE 1: Hash fragment token (Google OAuth implicit flow) ── 최우선 처리
     if (hashToken) {
       log('Hash token 감지 → setSession 시도 (type=' + hashType + ')')
       try {
@@ -130,6 +114,34 @@ auth.get('/callback', async (c) => {
         return
       } catch(e) {
         showError('setSession 오류: ' + e.message)
+        return
+      }
+    }
+
+    // ── CASE 2: PKCE code (이메일 인증 / 비번 재설정) ────
+    // ⚠️ Google OAuth가 implicit flow이므로 여기 도달하면 이메일 인증 코드
+    if (code) {
+      log('PKCE code 감지 → exchangeCodeForSession 시도')
+      document.getElementById('desc').textContent = '이메일 인증 처리 중...'
+      try {
+        const { data, error } = await client.auth.exchangeCodeForSession(code)
+        if (error) {
+          log('PKCE 교환 실패 (' + error.message + ') → getSession 시도')
+          // code_verifier 없을 때 fallback: 이미 세션이 있으면 그대로 사용
+          const { data: existing } = await client.auth.getSession()
+          if (existing?.session?.access_token) {
+            log('기존 세션으로 대체 처리')
+            await saveSessionAndRedirect(existing.session)
+            return
+          }
+          showError('코드 교환 실패: ' + error.message)
+          return
+        }
+        log('코드 교환 성공! user=' + data.session?.user?.email)
+        await saveSessionAndRedirect(data.session)
+        return
+      } catch(e) {
+        showError('exchangeCodeForSession 오류: ' + e.message)
         return
       }
     }

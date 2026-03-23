@@ -413,13 +413,15 @@ const SUPABASE_URL      = '${c.env.SUPABASE_URL}'
 const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
 const { createClient }  = supabase
 
-// ── Supabase 클라이언트 (PKCE flow 활성화 → code 방식 이메일 인증 지원) ──
+// ── Supabase 클라이언트 ──────────────────────────────────
+// Google OAuth: implicit flow (hash fragment) → code_verifier 불필요
+// 이메일 로그인: signInWithPassword → PKCE 불필요
 const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
     detectSessionInUrl: false,
-    flowType: 'pkce'        // ← 이메일 인증 code 파라미터 처리
+    flowType: 'implicit'    // ← Google OAuth가 hash fragment로 토큰 반환
   }
 })
 
