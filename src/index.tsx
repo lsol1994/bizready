@@ -9,6 +9,7 @@ import searchRoute    from './routes/search'
 import checklistRoute from './routes/checklist'
 import paymentRoute   from './routes/payment'
 import paymentApi     from './routes/payment-api'
+import adminRoute     from './routes/admin'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -46,6 +47,9 @@ app.post('/api/auth/signup', async (c) => {
 
 // ── 결제 완료 API (세션 미들웨어 내부에서 자체 검증) ──
 app.route('/api/payment', paymentApi)
+
+// ── 관리자 라우트 (lsol3264@gmail.com 전용) ───────
+app.route('/admin', adminRoute)
 
 // ── 보호 라우트 미들웨어 (/dashboard/*) ───────────
 app.use('/dashboard/*', async (c, next) => {

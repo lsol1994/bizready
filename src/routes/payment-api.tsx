@@ -95,7 +95,16 @@ paymentApi.post('/complete', async (c) => {
       return c.json({ ok: false, error: 'db_update_failed' }, 500)
     }
 
-    // 8. 결제 내역 로그 저장 (선택적 — 추후 payment_logs 테이블로 확장 가능)
+    // 8. 결제 내역 payment_logs 테이블에 저장
+    const { data: userData } = await admin.auth.admin.getUserById(userId)
+    await admin.from('payment_logs').insert({
+      user_id: userId,
+      user_email: userData?.user?.email ?? '',
+      payment_id: paymentId,
+      plan_id: planId,
+      amount: paymentData.amount?.total,
+      status: 'PAID',
+    })
     console.log(`[PAYMENT] user=${userId} plan=${planId} paymentId=${paymentId} amount=${paymentData.amount?.total}`)
 
     return c.json({ ok: true, plan: planId })
