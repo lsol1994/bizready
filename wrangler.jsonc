@@ -5,30 +5,14 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
+  ],
+  "vars": {
+    "SUPABASE_URL": "https://blvhpajeaelvmgfglivk.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_hXSJE5IOVVOwYEoIrhPIvw_b3nYUBqd",
+    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsdmhwYWplYWVsdm1nZmdsaXZrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Mzk4NjgxNywiZXhwIjoyMDg5NTYyODE3fQ.jX7CRonscWv4wKADoEvmWxNl3w_ATqtsBh5okJT9Le4",
+    "PORTONE_V2_STORE_ID": "store-7b370e7d-683d-4e5d-a75e-47f254cf91fe",
+    "PORTONE_V2_CHANNEL_KEY_KAKAO": "channel-key-e379d514-8869-4f9b-a701-63c95e81ffc9",
+    "PORTONE_V2_CHANNEL_KEY_TOSS": "channel-key-f56682af-9444-478f-86f2-5a53e91c5e19",
+    "PORTONE_V2_API_SECRET": "F8RDRV9zQiyy8XODg43ScWEo1uEKVXGLtJSrBGjiEmVk0yGTTqPJcZ1KWrYV1yZ17ZiPRB1Sv9bxuPiR"
+  }
 }
