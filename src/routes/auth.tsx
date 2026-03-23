@@ -207,9 +207,13 @@ auth.post('/set-session', async (c) => {
   const sessionData = JSON.stringify({ access_token, refresh_token })
   const encoded = encodeURIComponent(sessionData)
 
+  // Cloudflare Workers / gensparksite 환경에서 SameSite=None; Secure 필요
+  const isSecure = c.req.url.startsWith('https://')
+  const sameSite = isSecure ? 'None' : 'Lax'
+  const secureFlag = isSecure ? '; Secure' : ''
   c.header(
     'Set-Cookie',
-    `sb-session=${encoded}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`
+    `sb-session=${encoded}; Path=/; HttpOnly; SameSite=${sameSite}${secureFlag}; Max-Age=${60 * 60 * 24 * 7}`
   )
   return c.json({ ok: true })
 })
@@ -218,7 +222,10 @@ auth.post('/set-session', async (c) => {
 //  POST /auth/logout
 // ─────────────────────────────────────────────
 auth.post('/logout', (c) => {
-  c.header('Set-Cookie', `sb-session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`)
+  const isSecure = c.req.url.startsWith('https://')
+  const sameSite = isSecure ? 'None' : 'Lax'
+  const secureFlag = isSecure ? '; Secure' : ''
+  c.header('Set-Cookie', `sb-session=; Path=/; HttpOnly; SameSite=${sameSite}${secureFlag}; Max-Age=0`)
   return c.redirect('/login')
 })
 
