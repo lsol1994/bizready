@@ -42,7 +42,7 @@ paymentApi.post('/complete', async (c) => {
       `https://api.portone.io/payments/${encodeURIComponent(paymentId)}`,
       {
         headers: {
-          Authorization: `PortOne ${c.env.PORTONE_API_SECRET}`,
+          Authorization: `PortOne ${c.env.PORTONE_V2_API_SECRET}`,
           'Content-Type': 'application/json',
         },
       }

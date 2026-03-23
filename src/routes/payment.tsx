@@ -204,9 +204,9 @@ payment.get('/', async (c) => {
 const USER_ID   = '${userId}'
 const USER_EMAIL = '${userEmail}'
 const USER_NAME  = '${userName}'
-const STORE_ID   = '${c.env.PORTONE_STORE_ID}'
-const CHANNEL_KEY_KAKAO = '${c.env.PORTONE_CHANNEL_KEY_KAKAO}'
-const CHANNEL_KEY_TOSS  = '${c.env.PORTONE_CHANNEL_KEY_TOSS}'
+const STORE_ID   = '${c.env.PORTONE_V2_STORE_ID}'
+const CHANNEL_KEY_KAKAO = '${c.env.PORTONE_V2_CHANNEL_KEY_KAKAO}'
+const CHANNEL_KEY_TOSS  = '${c.env.PORTONE_V2_CHANNEL_KEY_TOSS}'
 
 async function requestPayment(method, planId, amount, planName) {
   const overlay = document.getElementById('payment-overlay')
