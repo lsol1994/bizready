@@ -3,62 +3,177 @@ import type { Env } from '../lib/supabase'
 
 const auth = new Hono<{ Bindings: Env }>()
 
-// ─────────────────────────────────────────────
-//  GET /auth/callback  ← Supabase OAuth 리다이렉트 처리
-// ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  GET /auth/callback
+//  처리 케이스:
+//  1) 이메일 인증 / 비밀번호 재설정  → URL에 ?code=xxx  (PKCE flow)
+//  2) Google OAuth                   → URL hash에 #access_token=xxx
+//  3) 이메일 인증링크 (구형)           → URL hash에 #access_token=xxx&type=signup
+// ─────────────────────────────────────────────────────────────
 auth.get('/callback', async (c) => {
-  // Supabase는 OAuth 후 hash fragment 로 토큰을 전달함
-  // → 브라우저 JS 에서 처리해야 하므로 중계 HTML 반환
+  const SUPABASE_URL     = c.env.SUPABASE_URL
+  const SUPABASE_ANON_KEY = c.env.SUPABASE_ANON_KEY
+
   return c.html(`<!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>로그인 처리중...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>로그인 처리중... | BizReady</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body { margin:0; display:flex; align-items:center; justify-content:center;
+           height:100vh; font-family:-apple-system,sans-serif; background:#f0f9ff; }
+    .box { text-align:center; background:white; border-radius:20px;
+           padding:40px 48px; box-shadow:0 4px 24px rgba(0,0,0,.08); max-width:360px; width:90%; }
+    .icon { font-size:48px; margin-bottom:16px; }
+    .title { font-size:18px; font-weight:700; color:#1e3a5f; margin-bottom:8px; }
+    .desc  { font-size:14px; color:#64748b; margin-bottom:16px; }
+    .debug { font-size:11px; color:#94a3b8; word-break:break-all; background:#f8fafc;
+             border-radius:8px; padding:8px; text-align:left; display:none; }
+    .err   { color:#ef4444; font-size:13px; margin-top:12px; }
+  </style>
 </head>
 <body>
-  <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#1e3a5f;">
-    <div style="text-align:center;">
-      <div style="font-size:48px;margin-bottom:16px;">⏳</div>
-      <p style="font-size:18px;">로그인 처리 중입니다...</p>
-    </div>
+  <div class="box">
+    <div class="icon" id="icon">⏳</div>
+    <div class="title" id="title">로그인 처리 중...</div>
+    <div class="desc"  id="desc">잠시만 기다려주세요</div>
+    <div class="debug" id="debug"></div>
+    <div class="err"   id="err"></div>
   </div>
-  <script>
-    (async function () {
-      const SUPABASE_URL = '${c.env.SUPABASE_URL}'
-      const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
-      const { createClient } = supabase
-      const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-      const { data, error } = await client.auth.getSession()
-      if (error || !data.session) {
-        // hash에서 직접 파싱 시도
-        const hash = window.location.hash
-        const params = new URLSearchParams(hash.substring(1))
-        const access_token = params.get('access_token')
-        const refresh_token = params.get('refresh_token')
-        if (access_token) {
-          await client.auth.setSession({ access_token, refresh_token: refresh_token || '' })
-        }
+  <script>
+  (async function() {
+    const SUPABASE_URL      = '${SUPABASE_URL}'
+    const SUPABASE_ANON_KEY = '${SUPABASE_ANON_KEY}'
+    const { createClient }  = supabase
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: true, detectSessionInUrl: true }
+    })
+
+    // ── 디버그 출력 헬퍼 ──────────────────────────────────
+    const dbg = document.getElementById('debug')
+    const isSandbox = location.origin.includes('novita.ai') || location.origin.includes('localhost')
+    function log(msg) {
+      console.log('[BizReady Auth]', msg)
+      if (isSandbox) {
+        dbg.style.display = 'block'
+        dbg.innerHTML += msg + '<br>'
       }
-      // 서버에 세션 저장 후 대시보드로
-      const { data: sessionData } = await client.auth.getSession()
-      if (sessionData?.session?.access_token) {
-        const res = await fetch('/auth/set-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_token: sessionData.session.access_token,
-            refresh_token: sessionData.session.refresh_token,
-          }),
+    }
+    function showError(msg) {
+      console.error('[BizReady Auth Error]', msg)
+      document.getElementById('icon').textContent  = '❌'
+      document.getElementById('title').textContent = '로그인 실패'
+      document.getElementById('desc').textContent  = '아래 오류를 확인해주세요'
+      document.getElementById('err').textContent   = msg
+      if (isSandbox) {
+        dbg.style.display = 'block'
+        dbg.innerHTML += '<span style="color:#ef4444">ERROR: ' + msg + '</span><br>'
+      }
+      setTimeout(() => { location.href = '/login?error=auth_failed' }, 4000)
+    }
+
+    // ── URL 파라미터 파싱 ─────────────────────────────────
+    const urlParams = new URLSearchParams(location.search)
+    const hashParams = new URLSearchParams(location.hash.substring(1))
+
+    const code          = urlParams.get('code')          // PKCE flow (이메일 인증, 비번 재설정)
+    const errorCode     = urlParams.get('error')
+    const errorDesc     = urlParams.get('error_description')
+    const hashToken     = hashParams.get('access_token') // OAuth hash flow
+    const hashType      = hashParams.get('type')         // signup | recovery | ...
+    const hashRefresh   = hashParams.get('refresh_token') || ''
+
+    log('URL: ' + location.href)
+    log('code=' + code + ' | hash_token=' + (hashToken ? '있음' : '없음') + ' | type=' + hashType)
+
+    // ── 에러 파라미터 처리 ────────────────────────────────
+    if (errorCode) {
+      log('Supabase 오류: ' + errorCode + ' / ' + errorDesc)
+      if (errorCode === 'access_denied' && errorDesc && errorDesc.includes('redirect_uri')) {
+        showError('리다이렉트 URL 불일치 오류입니다.\\n\\nSupabase Dashboard → Authentication → URL Configuration → Additional Redirect URLs 에\\n현재 주소(' + location.origin + '/auth/callback)를 추가해주세요.')
+      } else {
+        showError(errorCode + ': ' + (errorDesc || ''))
+      }
+      return
+    }
+
+    // ── CASE 1: PKCE code (이메일 인증 / 비번 재설정) ────
+    if (code) {
+      log('PKCE code 감지 → exchangeCodeForSession 시도')
+      document.getElementById('desc').textContent = '이메일 인증 처리 중...'
+      try {
+        const { data, error } = await client.auth.exchangeCodeForSession(code)
+        if (error) { showError('코드 교환 실패: ' + error.message); return }
+        log('코드 교환 성공! user=' + data.session?.user?.email)
+        await saveSessionAndRedirect(data.session)
+        return
+      } catch(e) {
+        showError('exchangeCodeForSession 오류: ' + e.message)
+        return
+      }
+    }
+
+    // ── CASE 2: Hash fragment token (OAuth / 구형 이메일 링크) ──
+    if (hashToken) {
+      log('Hash token 감지 → setSession 시도 (type=' + hashType + ')')
+      try {
+        const { data, error } = await client.auth.setSession({
+          access_token:  hashToken,
+          refresh_token: hashRefresh
         })
-        if (res.ok) {
-          window.location.href = '/dashboard'
-          return
-        }
+        if (error) { showError('세션 설정 실패: ' + error.message); return }
+        log('세션 설정 성공! user=' + data.session?.user?.email)
+        await saveSessionAndRedirect(data.session)
+        return
+      } catch(e) {
+        showError('setSession 오류: ' + e.message)
+        return
       }
-      window.location.href = '/login?error=auth_failed'
-    })()
+    }
+
+    // ── CASE 3: 이미 세션이 있는 경우 (재방문) ───────────
+    const { data: existing } = await client.auth.getSession()
+    if (existing?.session?.access_token) {
+      log('기존 세션 발견 → 바로 저장')
+      await saveSessionAndRedirect(existing.session)
+      return
+    }
+
+    // ── 아무것도 없으면 로그인으로 ───────────────────────
+    log('처리할 토큰/코드 없음 → 로그인 페이지로')
+    showError('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.')
+
+    // ── 세션 저장 및 리다이렉트 공통 함수 ────────────────
+    async function saveSessionAndRedirect(session) {
+      if (!session?.access_token) {
+        showError('세션 데이터가 올바르지 않습니다.')
+        return
+      }
+      document.getElementById('icon').textContent  = '🔐'
+      document.getElementById('desc').textContent  = '세션 저장 중...'
+      const res = await fetch('/auth/set-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token:  session.access_token,
+          refresh_token: session.refresh_token || ''
+        })
+      })
+      if (res.ok) {
+        document.getElementById('icon').textContent  = '✅'
+        document.getElementById('title').textContent = '로그인 완료!'
+        document.getElementById('desc').textContent  = '대시보드로 이동합니다...'
+        log('세션 저장 완료 → /dashboard 이동')
+        setTimeout(() => { location.href = '/dashboard' }, 600)
+      } else {
+        const body = await res.text()
+        showError('세션 저장 실패: HTTP ' + res.status + ' / ' + body)
+      }
+    }
+  })()
   </script>
 </body>
 </html>`)

@@ -409,39 +409,69 @@ login.get('/', (c) => {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-const SUPABASE_URL = '${c.env.SUPABASE_URL}'
+const SUPABASE_URL      = '${c.env.SUPABASE_URL}'
 const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
-const { createClient } = supabase
-const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const { createClient }  = supabase
 
-// ── 이메일 로그인 ───────────────────────────────────────
-document.getElementById('email-login-form').addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const btn     = document.getElementById('login-btn')
+// ── Supabase 클라이언트 (PKCE flow 활성화 → code 방식 이메일 인증 지원) ──
+const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false,
+    flowType: 'pkce'        // ← 이메일 인증 code 파라미터 처리
+  }
+})
+
+// ── 현재 앱 URL 기반 redirectTo (동적 — 어떤 미리보기 URL도 대응) ──
+const REDIRECT_TO = window.location.origin + '/auth/callback'
+
+// ── 디버그 로거 (샌드박스 환경에서만 화면+콘솔 출력) ──
+const isSandbox = location.origin.includes('novita.ai') || location.origin.includes('localhost')
+function dbgLog(label, data) {
+  const msg = '[BizReady Login] ' + label + (data ? ': ' + JSON.stringify(data) : '')
+  console.log(msg)
+}
+function showFormError(msg) {
   const errDiv  = document.getElementById('form-error')
   const errText = document.getElementById('form-error-text')
+  errDiv.classList.remove('hidden')
+  errText.textContent = msg
+  dbgLog('로그인 오류', msg)
+}
+
+// ── 이메일 로그인 ──────────────────────────────────────
+document.getElementById('email-login-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const btn  = document.getElementById('login-btn')
   btn.disabled  = true
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>로그인 중...'
-  errDiv.classList.add('hidden')
+  document.getElementById('form-error').classList.add('hidden')
 
   const email    = document.getElementById('email').value.trim()
   const password = document.getElementById('password').value
 
+  dbgLog('이메일 로그인 시도', email)
   const { data, error } = await client.auth.signInWithPassword({ email, password })
+
   if (error) {
-    errDiv.classList.remove('hidden')
+    dbgLog('signInWithPassword 오류', error.message)
     if (error.message.includes('Email not confirmed')) {
-      errText.textContent = '이메일 인증이 필요합니다. 잠시 후 다시 시도해주세요.'
-    } else if (error.message.includes('Invalid login')) {
-      errText.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.'
+      showFormError('이메일 인증이 완료되지 않았습니다. 잠시 후 다시 시도해주세요.')
+    } else if (error.message.includes('Invalid login') || error.message.includes('invalid_credentials')) {
+      showFormError('이메일 또는 비밀번호가 올바르지 않습니다.')
+    } else if (error.message.includes('redirect')) {
+      showFormError('리다이렉트 URL 오류: Supabase Additional Redirect URLs에 ' + REDIRECT_TO + ' 를 추가해주세요.')
     } else {
-      errText.textContent = error.message
+      showFormError(error.message)
     }
     btn.disabled  = false
     btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>이메일로 로그인'
     return
   }
+
   if (data.session) {
+    dbgLog('로그인 성공 → 세션 저장', data.session.user?.email)
     await fetch('/auth/set-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -459,12 +489,18 @@ async function loginWithGoogle() {
   const btn = document.getElementById('google-btn')
   btn.disabled  = true
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Google로 이동 중...'
+  dbgLog('Google OAuth 시작, redirectTo', REDIRECT_TO)
   const { error } = await client.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin + '/auth/callback' }
+    options: { redirectTo: REDIRECT_TO }
   })
   if (error) {
-    alert('Google 로그인 오류: ' + error.message)
+    dbgLog('Google OAuth 오류', error.message)
+    if (error.message.includes('redirect') || error.message.includes('URL')) {
+      alert('리다이렉트 URL 오류:\\n\\nSupabase Dashboard → Authentication → URL Configuration\\n→ Additional Redirect URLs 에 아래 주소를 추가해주세요:\\n\\n' + REDIRECT_TO)
+    } else {
+      alert('Google 로그인 오류: ' + error.message)
+    }
     btn.disabled  = false
     btn.innerHTML = '<svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg><span>Google 계정으로 계속하기</span><span class="ml-auto text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">추천</span>'
   }
@@ -490,8 +526,9 @@ async function sendResetEmail() {
   const email = document.getElementById('reset-email').value.trim()
   const msg   = document.getElementById('reset-msg')
   if (!email) return
+  dbgLog('비밀번호 재설정 요청, redirectTo', REDIRECT_TO)
   const { error } = await client.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/auth/callback'
+    redirectTo: REDIRECT_TO
   })
   msg.classList.remove('hidden')
   if (error) {
