@@ -78,6 +78,7 @@ dashboard.get('/', async (c) => {
 
   let userEmail = '사용자'
   let userName = ''
+  let isPaid = false
 
   try {
     const sessionObj = JSON.parse(decodeURIComponent(sessionStr))
@@ -93,11 +94,16 @@ dashboard.get('/', async (c) => {
 
     userEmail = user.email ?? '사용자'
     userName = (user.user_metadata?.full_name as string) || userEmail.split('@')[0]
+
+    const { data: profile } = await supabase
+      .from('user_profiles').select('is_paid').eq('id', user.id).single()
+    isPaid = profile?.is_paid ?? false
   } catch {
     return c.redirect('/login?error=session_expired')
   }
 
   const initial = userName.charAt(0).toUpperCase()
+  const upgraded = c.req.query('upgraded') === '1'
 
   return c.render(
     <div class="flex h-screen overflow-hidden">
@@ -124,7 +130,7 @@ dashboard.get('/', async (c) => {
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-white text-sm font-medium truncate">{userName}</div>
-              <div class="text-sky-300 text-xs truncate">{userEmail}</div>
+              <div class="text-sky-300 text-xs">{isPaid ? '💎 프리미엄' : '무료 플랜'}</div>
             </div>
           </div>
         </div>
@@ -155,9 +161,9 @@ dashboard.get('/', async (c) => {
           <div class="pt-3 pb-1">
             <p class="text-white/30 text-xs px-3 uppercase tracking-wider">설정</p>
           </div>
-          <a href="/dashboard/settings" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
-            <i class="fas fa-cog w-4 text-center"></i>
-            <span>계정 설정</span>
+          <a href="/dashboard/payment" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
+            <i class="fas fa-crown w-4 text-center"></i>
+            <span>{isPaid ? '구독 관리' : '프리미엄'}</span>
           </a>
         </nav>
 
@@ -203,6 +209,17 @@ dashboard.get('/', async (c) => {
         </header>
 
         <div class="px-8 py-6 max-w-6xl">
+          {/* 업그레이드 완료 토스트 */}
+          {upgraded && (
+            <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+              <span class="text-2xl">🎉</span>
+              <div>
+                <div class="font-bold text-green-800">프리미엄 구독 활성화 완료!</div>
+                <div class="text-green-600 text-sm">이제 모든 가이드를 자유롭게 열람하실 수 있습니다.</div>
+              </div>
+            </div>
+          )}
+
           {/* 배너 */}
           <div class="gradient-bg rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
             <div class="absolute right-0 top-0 w-48 h-full opacity-10">
