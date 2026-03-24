@@ -12,6 +12,7 @@ import paymentApi     from './routes/payment-api'
 import adminRoute     from './routes/admin'
 import fileApi        from './routes/file-api'
 import calendarRoute  from './routes/calendar'
+import memoRoute      from './routes/memo'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -71,6 +72,7 @@ app.route('/dashboard/search',    searchRoute)
 app.route('/dashboard/checklist', checklistRoute)
 app.route('/dashboard/payment',   paymentRoute)
 app.route('/dashboard/calendar',  calendarRoute)
+app.route('/dashboard/memo',      memoRoute)
 app.route('/dashboard',           dashboardRoute)
 
 // ── 루트 리다이렉트 ─────────────────────────────

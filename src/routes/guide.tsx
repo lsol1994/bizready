@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
+import { Sidebar } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const guide = new Hono<{ Bindings: Env }>()
@@ -161,58 +162,13 @@ guide.get('/:id', async (c) => {
 
   return c.render(
     <div class="flex h-screen overflow-hidden">
-      {/* 사이드바 */}
-      <aside class="w-64 gradient-bg flex flex-col flex-shrink-0">
-        <div class="px-6 py-5 border-b border-white/10">
-          <a href="/dashboard" class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-              <i class="fas fa-briefcase text-white text-sm"></i>
-            </div>
-            <div>
-              <div class="text-white font-bold text-base">BizReady</div>
-              <div class="text-sky-200 text-xs">경영지원 아카이브</div>
-            </div>
-          </a>
-        </div>
-        <div class="px-4 py-4 border-b border-white/10">
-          <div class="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2.5">
-            <div class="w-8 h-8 bg-sky-400 rounded-full flex items-center justify-center text-white text-sm font-bold">{userInitial}</div>
-            <div class="flex-1 min-w-0">
-              <div class="text-white text-sm font-medium truncate">{userName}</div>
-              <div class="text-sky-300 text-xs">{isPaid ? '💎 프리미엄' : '무료 플랜'}</div>
-            </div>
-          </div>
-        </div>
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <a href="/dashboard" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-home w-4 text-center"></i><span>홈</span></a>
-          <a href="/dashboard/archive" class="sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-white text-sm"><i class="fas fa-book-open w-4 text-center"></i><span>업무 아카이브</span></a>
-          <a href="/dashboard/search" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-search w-4 text-center"></i><span>지식 검색</span></a>
-          <a href="/dashboard/checklist" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-clipboard-check w-4 text-center"></i><span>체크리스트</span></a>
-
-          {/* 카테고리 바로가기 */}
-          <div class="pt-3 pb-1">
-            <div class="text-sky-400 text-xs font-medium px-3 mb-2">카테고리</div>
-            {[
-              { name: '세무회계', icon: 'fa-calculator' },
-              { name: '인사노무', icon: 'fa-users' },
-              { name: '총무', icon: 'fa-building' },
-            ].map(cat => (
-              <a href={`/dashboard/archive?cat=${encodeURIComponent(cat.name)}`}
-                 class="sidebar-item flex items-center gap-3 px-3 py-2 rounded-lg text-sky-200 hover:text-white text-sm">
-                <i class={`fas ${cat.icon} w-4 text-center text-xs`}></i>
-                <span class="text-xs">{cat.name}</span>
-              </a>
-            ))}
-          </div>
-        </nav>
-        <div class="px-3 pb-4">
-          <form action="/auth/logout" method="POST">
-            <button type="submit" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white hover:bg-white/10 text-sm transition-colors">
-              <i class="fas fa-sign-out-alt w-4 text-center"></i><span>로그아웃</span>
-            </button>
-          </form>
-        </div>
-      </aside>
+      {/* 공통 사이드바 */}
+      <Sidebar
+        userName={userName}
+        userInitial={userInitial}
+        isPaid={isPaid}
+        currentPath="/dashboard/guide"
+      />
 
       {/* 메인 */}
       <main class="flex-1 overflow-y-auto bg-gray-50">
