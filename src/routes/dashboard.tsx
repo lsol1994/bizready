@@ -153,6 +153,10 @@ dashboard.get('/', async (c) => {
             <i class="fas fa-clipboard-check w-4 text-center"></i>
             <span>체크리스트</span>
           </a>
+          <a href="/dashboard/calendar" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
+            <i class="fas fa-calendar-alt w-4 text-center"></i>
+            <span>사내 주요 일정</span>
+          </a>
           <a href="/dashboard/memo" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
             <i class="fas fa-sticky-note w-4 text-center"></i>
             <span>내 메모</span>
@@ -227,7 +231,7 @@ dashboard.get('/', async (c) => {
             </div>
             <h2 class="text-lg font-bold mb-1">🎉 경영지원 올인원 아카이브에 오신 것을 환영합니다!</h2>
             <p class="text-sky-200 text-sm mb-4">
-              5년 차 실무 노하우가 담긴 업무 가이드를 지금 바로 확인하세요.
+              중소기업(SME)을 위한 통합 경영지원 가이드를 지금 바로 확인하세요.
             </p>
             <div class="flex gap-3">
               <a

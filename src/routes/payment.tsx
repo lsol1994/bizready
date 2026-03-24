@@ -106,7 +106,7 @@ payment.get('/', async (c) => {
       <main class="flex-1 overflow-y-auto bg-gray-50">
         <header class="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-10">
           <h1 class="text-xl font-bold text-gray-800">프리미엄 구독</h1>
-          <p class="text-gray-500 text-sm">5년차 실무 노하우 전체를 이용하세요</p>
+          <p class="text-gray-500 text-sm">중소기업(SME)을 위한 통합 경영지원 가이드 전체를 이용하세요</p>
         </header>
 
         <div class="px-8 py-8 max-w-4xl">

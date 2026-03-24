@@ -274,7 +274,7 @@ guide.get('/:id', async (c) => {
                     </div>
                     <div>
                       <h3 class="font-bold text-emerald-900 text-base">📥 실무 양식 다운로드</h3>
-                      <p class="text-emerald-600 text-xs mt-0.5">5년 차 실무자가 직접 만든 엑셀 양식</p>
+                      <p class="text-emerald-600 text-xs mt-0.5">중소기업(SME) 실무에 바로 쓰는 엑셀 양식</p>
                     </div>
                   </div>
                   <div class="space-y-3">

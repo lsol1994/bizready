@@ -66,7 +66,7 @@ adminRoute.get('/', async (c) => {
   if (!auth) return c.redirect('/login?error=unauthorized')
 
   const db = getSupabaseAdmin(c.env)
-  const { data: guides } = await db.from('guides').select('id,title,category,is_premium,status,updated_by,updated_at,view_count').order('created_at', { ascending: false })
+  const { data: guides } = await db.from('guides').select('id,title,category,subcategory,is_premium,status,updated_by,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false })
   const { data: users } = await db.auth.admin.listUsers()
   const { data: profiles } = await db.from('user_profiles').select('*')
   const { data: payments } = await db.from('payment_logs').select('*').order('created_at', { ascending: false })
@@ -159,6 +159,16 @@ adminRoute.get('/', async (c) => {
               </button>
             </div>
             <div class="overflow-x-auto">
+              {(guides ?? []).length === 0 ? (
+                <div class="text-center py-16 text-gray-400">
+                  <i class="fas fa-book text-4xl mb-3 block text-gray-300"></i>
+                  <p class="font-medium">등록된 데이터가 없습니다</p>
+                  <p class="text-sm mt-1 mb-4">아직 가이드가 없습니다. 새 가이드를 추가해보세요.</p>
+                  <button onclick="openGuideModal()" class="inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-plus"></i>신규 등록
+                  </button>
+                </div>
+              ) : (
               <table class="w-full text-sm">
                 <thead class="bg-gray-50 border-b border-gray-100">
                   <tr>
@@ -239,6 +249,7 @@ adminRoute.get('/', async (c) => {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           </div>
         </div>
@@ -255,39 +266,52 @@ adminRoute.get('/', async (c) => {
                 <i class="fas fa-download"></i>CSV 다운로드
               </button>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th class="text-left px-4 py-3 text-gray-500 font-medium">이메일</th>
-                    <th class="text-left px-4 py-3 text-gray-500 font-medium">이름</th>
-                    <th class="text-center px-4 py-3 text-gray-500 font-medium">구독</th>
-                    <th class="text-center px-4 py-3 text-gray-500 font-medium">플랜</th>
-                    <th class="text-left px-4 py-3 text-gray-500 font-medium">가입일</th>
-                    <th class="text-left px-4 py-3 text-gray-500 font-medium">최근 로그인</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(users?.users ?? []).map((u: any) => {
-                    const profile = profiles?.find((p: any) => p.id === u.id)
-                    return (
-                      <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer" onclick={`showUserDetail('${u.id}', '${u.email}')`}>
-                        <td class="px-4 py-3 font-medium text-gray-800">{u.email}</td>
-                        <td class="px-4 py-3 text-gray-600">{profile?.full_name || u.user_metadata?.full_name || '-'}</td>
-                        <td class="px-4 py-3 text-center">
-                          <span class={`text-xs px-2.5 py-1 rounded-full font-medium ${profile?.is_paid ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                            {profile?.is_paid ? '💎 유료' : '무료'}
-                          </span>
-                        </td>
-                        <td class="px-4 py-3 text-center text-gray-500 text-xs">{profile?.plan_type || 'free'}</td>
-                        <td class="px-4 py-3 text-gray-400 text-xs">{new Date(u.created_at).toLocaleDateString('ko-KR')}</td>
-                        <td class="px-4 py-3 text-gray-400 text-xs">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('ko-KR') : '-'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {(users?.users ?? []).length === 0 ? (
+              <div class="text-center py-16 text-gray-400">
+                <i class="fas fa-users text-4xl mb-3 block text-gray-300"></i>
+                <p class="font-medium">등록된 데이터가 없습니다</p>
+                <p class="text-sm mt-1">회원 가입이 완료되면 여기에 표시됩니다.</p>
+              </div>
+            ) : (
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">이메일</th>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">이름</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium">구독</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium">플랜</th>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">가입일</th>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">최근 로그인</th>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">최종 수정</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(users?.users ?? []).map((u: any) => {
+                      const profile = profiles?.find((p: any) => p.id === u.id)
+                      return (
+                        <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer" onclick={`showUserDetail('${u.id}', '${(u.email||'').replace(/'/g, '')}')` }>
+                          <td class="px-4 py-3 font-medium text-gray-800">{u.email || '-'}</td>
+                          <td class="px-4 py-3 text-gray-600">{profile?.full_name || u.user_metadata?.full_name || '-'}</td>
+                          <td class="px-4 py-3 text-center">
+                            <span class={`text-xs px-2.5 py-1 rounded-full font-medium ${profile?.is_paid ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
+                              {profile?.is_paid ? '💎 유료' : '무료'}
+                            </span>
+                          </td>
+                          <td class="px-4 py-3 text-center text-gray-500 text-xs">{profile?.plan_type || 'free'}</td>
+                          <td class="px-4 py-3 text-gray-400 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-'}</td>
+                          <td class="px-4 py-3 text-gray-400 text-xs">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString('ko-KR') : '-'}</td>
+                          <td class="px-4 py-3 text-xs text-gray-400">
+                            <div>{profile?.updated_by || '-'}</div>
+                            <div>{profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString('ko-KR') : '-'}</div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
@@ -305,9 +329,9 @@ adminRoute.get('/', async (c) => {
             </div>
             {(payments ?? []).length === 0 ? (
               <div class="text-center py-16 text-gray-400">
-                <i class="fas fa-receipt text-4xl mb-3 block"></i>
-                <p>아직 결제 내역이 없습니다.</p>
-                <p class="text-sm mt-1">실결제 테스트 후 여기에 표시됩니다.</p>
+                <i class="fas fa-receipt text-4xl mb-3 block text-gray-300"></i>
+                <p class="font-medium">등록된 데이터가 없습니다</p>
+                <p class="text-sm mt-1">아직 결제 내역이 없습니다. 실결제 완료 후 여기에 표시됩니다.</p>
               </div>
             ) : (
               <div class="overflow-x-auto">
@@ -730,6 +754,7 @@ adminRoute.get('/', async (c) => {
               await uploadPendingFiles(guideId)
             }
             closeGuideModal()
+            // 즉시 페이지 갱신 (신규 가이드 또는 파일 업로드 완료 시)
             location.reload()
           } else {
             errEl.textContent = '❌ 저장 실패: ' + (data.error || '알 수 없는 오류')

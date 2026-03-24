@@ -27,7 +27,7 @@ const MAIN_CATEGORIES = ['세무회계', '인사노무', '총무']
 const SUBCATEGORIES: Record<string, string[]> = {
   '세무회계':  ['전표/결산', '부가세', '법인세', '원천세/연말정산', '자금관리'],
   '인사노무':  ['채용/퇴사', '급여/4대보험', '근태/연차', '근로계약/사규', '성과평가'],
-  '총무':      ['자산/시설', '법무/인장', '복리후생', '구매관리', '전사 일정 관리'],
+  '총무':      ['자산/시설', '법무/인장', '복리후생', '구매관리', '사내 주요 일정'],
   '회계·세무': ['전표/결산', '부가세', '법인세', '원천세/연말정산', '자금관리'],
   '인사·노무': ['채용/퇴사', '급여/4대보험', '근태/연차', '근로계약/사규', '성과평가'],
   '총무·행정': ['자산/시설', '법무/인장', '복리후생', '구매관리'],
@@ -122,7 +122,7 @@ archive.get('/', async (c) => {
           <a href="/dashboard/archive"   class="sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-white text-sm"><i class="fas fa-book-open w-4 text-center"></i><span>업무 아카이브</span></a>
           <a href="/dashboard/search"    class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-search w-4 text-center"></i><span>지식 검색</span></a>
           <a href="/dashboard/checklist" class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-clipboard-check w-4 text-center"></i><span>체크리스트</span></a>
-          <a href="/dashboard/calendar"  class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-calendar-alt w-4 text-center"></i><span>전사 일정</span></a>
+          <a href="/dashboard/calendar"  class="sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm"><i class="fas fa-calendar-alt w-4 text-center"></i><span>사내 주요 일정</span></a>
 
           {/* 카테고리 바로가기 */}
           <div class="pt-3">
@@ -162,7 +162,7 @@ archive.get('/', async (c) => {
               ) : '업무 아카이브'}
             </h1>
             <p class="text-gray-500 text-xs mt-0.5">
-              {guides.length}개 가이드 · 5년차 실무 노하우 총집결
+              {guides.length}개 가이드 · 중소기업(SME)을 위한 통합 경영지원 가이드
             </p>
           </div>
           <div class="flex items-center gap-2">
