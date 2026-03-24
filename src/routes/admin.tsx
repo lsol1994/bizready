@@ -205,12 +205,26 @@ adminRoute.get('/', async (c) => {
                       </td>
                       <td class="px-4 py-3 text-center">
                         <div class="flex items-center justify-center gap-1">
+                          {/* 파일 첨부 표시 */}
+                          {(g.file_url_1 || g.file_url_2 || g.file_url_3) && (
+                            <span class="text-emerald-500 text-xs" title="첨부파일 있음">
+                              <i class="fas fa-paperclip"></i>
+                              {[g.file_url_1, g.file_url_2, g.file_url_3].filter(Boolean).length}
+                            </span>
+                          )}
                           <button
                             onclick={`editGuide(${JSON.stringify(g).replace(/"/g, '&quot;')})`}
                             class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                             title="수정"
                           >
                             <i class="fas fa-edit text-xs"></i>
+                          </button>
+                          <button
+                            onclick={`manageFiles('${g.id}', '${g.title.replace(/'/g, "\\'")}', '${g.file_url_1||''}', '${g.file_name_1||''}', '${g.file_url_2||''}', '${g.file_name_2||''}', '${g.file_url_3||''}', '${g.file_name_3||''}')`}
+                            class="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="파일 관리"
+                          >
+                            <i class="fas fa-file-upload text-xs"></i>
                           </button>
                           <button
                             onclick={`deleteGuide('${g.id}', '${g.title.replace(/'/g, "\\'")}')`}
@@ -333,42 +347,54 @@ adminRoute.get('/', async (c) => {
         </div>
       </div>
 
-      {/* ══ 가이드 편집 모달 ══ */}
+      {/* ══ 가이드 편집 모달 (파일 업로드 포함) ══ */}
       <div id="guide-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto shadow-2xl">
+          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
             <h3 class="font-bold text-gray-800 text-lg" id="modal-title">가이드 추가</h3>
             <button onclick="closeGuideModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
               <i class="fas fa-times text-xl"></i>
             </button>
           </div>
-          <div class="p-6 space-y-4">
+          <div class="p-6 space-y-5">
             <input type="hidden" id="guide-id" value="" />
+
+            {/* 제목 */}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">제목 <span class="text-red-500">*</span></label>
               <input id="guide-title" type="text" placeholder="가이드 제목을 입력하세요"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div class="grid grid-cols-2 gap-4">
+
+            {/* 카테고리/서브카테고리/상태 */}
+            <div class="grid grid-cols-3 gap-3">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
-                <select id="guide-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="guide-category" onchange="updateSubcategory()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="세무회계">세무회계</option>
+                  <option value="인사노무">인사노무</option>
+                  <option value="총무">총무</option>
                   <option value="회계·세무">회계·세무</option>
                   <option value="인사·노무">인사·노무</option>
                   <option value="총무·행정">총무·행정</option>
-                  <option value="세금·신고">세금·신고</option>
-                  <option value="급여관리">급여관리</option>
-                  <option value="입사 체크리스트">입사 체크리스트</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">서브카테고리</label>
+                <select id="guide-subcategory" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">선택 안함</option>
                 </select>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">상태</label>
                 <select id="guide-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="published">발행중</option>
-                  <option value="draft">임시저장</option>
+                  <option value="published">● 발행중</option>
+                  <option value="draft">○ 임시저장</option>
                 </select>
               </div>
             </div>
+
+            {/* 요약 + 프리미엄 */}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">요약</label>
               <input id="guide-summary" type="text" placeholder="목록에 표시될 1~2줄 요약"
@@ -378,11 +404,58 @@ adminRoute.get('/', async (c) => {
               <input id="guide-premium" type="checkbox" class="w-4 h-4 text-blue-600 rounded" />
               <label class="text-sm font-medium text-gray-700">💎 프리미엄 가이드 (유료 회원만 열람)</label>
             </div>
+
+            {/* 본문 */}
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">본문 (Markdown) <span class="text-red-500">*</span></label>
-              <textarea id="guide-content" rows={12} placeholder="## 제목&#10;&#10;본문을 Markdown 형식으로 작성하세요.&#10;&#10;- 항목1&#10;- 항목2&#10;&#10;**굵게**, `코드`"
+              <textarea id="guide-content" rows={14} placeholder="## 제목&#10;&#10;본문을 Markdown 형식으로 작성하세요.&#10;&#10;- 항목1&#10;&#10;**굵게**, `코드`&#10;&#10;[근로기준법 제60조] 형식으로 법령 링크 자동 생성"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
             </div>
+
+            {/* ── 파일 업로드 섹션 ── */}
+            <div id="file-upload-section" class="hidden border border-dashed border-emerald-300 rounded-xl p-4 bg-emerald-50">
+              <div class="flex items-center gap-2 mb-3">
+                <i class="fas fa-file-upload text-emerald-600"></i>
+                <span class="font-medium text-emerald-800 text-sm">실무 양식 파일 첨부 (최대 3개)</span>
+                <span class="text-xs text-emerald-600">xlsx, zip, rar, pdf, docx, hwp · 각 20MB 이하</span>
+              </div>
+              <div class="space-y-2">
+                {[1, 2, 3].map(slot => (
+                  <div class="flex items-center gap-2">
+                    <div class={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${slot===1?'bg-green-100 text-green-700':slot===2?'bg-blue-100 text-blue-700':'bg-purple-100 text-purple-700'}`}>
+                      {slot}
+                    </div>
+                    <div class="flex-1 min-w-0" id={`file-slot-${slot}`}>
+                      <div class="relative">
+                        <input type="file" id={`file-input-${slot}`}
+                          accept=".xlsx,.xls,.zip,.rar,.pdf,.docx,.hwp,.hwpx"
+                          class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          onchange={`handleFileSelect(${slot})`} />
+                        <div id={`file-label-${slot}`} class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 bg-white cursor-pointer hover:border-emerald-400 flex items-center gap-2">
+                          <i class="fas fa-paperclip text-gray-400"></i>
+                          <span>파일 선택 (슬롯 {slot})</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" onclick={`clearFileSlot(${slot})`}
+                      class="flex-shrink-0 text-red-400 hover:text-red-600 text-xs p-1">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p class="text-xs text-emerald-600 mt-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                가이드 저장 후 파일이 자동 업로드됩니다. 원본 파일명이 보존됩니다.
+              </p>
+            </div>
+            <button type="button" onclick="toggleFileUpload()"
+              id="file-upload-toggle"
+              class="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-medium">
+              <i class="fas fa-paperclip"></i>
+              <span id="file-toggle-label">실무 양식 파일 첨부하기</span>
+            </button>
+
             <div id="modal-error" class="hidden text-red-500 text-sm bg-red-50 p-3 rounded-lg"></div>
           </div>
           <div class="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end sticky bottom-0 bg-white">
@@ -394,6 +467,94 @@ adminRoute.get('/', async (c) => {
           </div>
         </div>
       </div>
+
+      {/* ══ 파일 관리 모달 ══ */}
+      <div id="file-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-gray-800">파일 관리</h3>
+              <p class="text-xs text-gray-400 mt-0.5" id="file-modal-guide-title"></p>
+            </div>
+            <button onclick="closeFileModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+          </div>
+          <div class="p-6 space-y-4" id="file-modal-body">
+            {/* JS로 동적 렌더링 */}
+          </div>
+          <div class="px-6 py-3 bg-gray-50 rounded-b-2xl text-xs text-gray-400">
+            <i class="fas fa-info-circle mr-1"></i>
+            허용 형식: xlsx, xls, zip, rar, pdf, docx, hwp · 최대 20MB
+          </div>
+        </div>
+      </div>
+
+      <script>{`
+        // ── 파일 관리 모달 ─────────────────────────────────
+        let _fileGuideId = ''
+        function manageFiles(guideId, title, u1, n1, u2, n2, u3, n3) {
+          _fileGuideId = guideId
+          document.getElementById('file-modal-guide-title').textContent = title
+          const body = document.getElementById('file-modal-body')
+          const slots = [{url:u1,name:n1},{url:u2,name:n2},{url:u3,name:n3}]
+          const colors = ['emerald','blue','purple']
+          body.innerHTML = slots.map((s, i) => {
+            const slot = i + 1
+            const hasFile = !!s.url
+            const ext = s.name ? s.name.split('.').pop().toLowerCase() : ''
+            const iconMap = {xlsx:'🟢',xls:'🟢',zip:'🟠',rar:'🟠',pdf:'🔴',docx:'🔵',hwp:'🟦',hwpx:'🟦'}
+            const icon = iconMap[ext] || '📎'
+            return '<div class="border border-gray-100 rounded-xl p-4 bg-gray-50">' +
+              '<div class="flex items-center justify-between mb-2">' +
+              '<span class="text-sm font-medium text-gray-700">슬롯 ' + slot + '</span>' +
+              (hasFile ? '<button onclick="deleteFile(\\''+guideId+'\\','+slot+')" class="text-xs text-red-400 hover:text-red-600 flex items-center gap-1"><i class="fas fa-trash"></i> 삭제</button>' : '') +
+              '</div>' +
+              (hasFile
+                ? '<div class="flex items-center gap-2 bg-white rounded-lg p-2 border border-gray-200 mb-2">' +
+                  '<span class="text-base">' + icon + '</span>' +
+                  '<span class="text-sm text-gray-700 flex-1 truncate">' + (s.name || '첨부파일') + '</span>' +
+                  '<a href="' + s.url + '" target="_blank" class="text-xs text-blue-500 hover:underline">보기</a>' +
+                  '</div>'
+                : '<div class="text-xs text-gray-400 mb-2">파일 없음</div>') +
+              '<div class="relative">' +
+              '<input type="file" id="fm-input-'+slot+'" accept=".xlsx,.xls,.zip,.rar,.pdf,.docx,.hwp,.hwpx" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onchange="uploadFileSlot('+slot+')">' +
+              '<div class="border-2 border-dashed border-gray-300 rounded-lg py-3 text-center cursor-pointer hover:border-emerald-400 transition-colors">' +
+              '<i class="fas fa-cloud-upload-alt text-gray-400 mr-1"></i>' +
+              '<span class="text-xs text-gray-500">' + (hasFile ? '파일 교체하기' : '파일 업로드') + '</span>' +
+              '</div>' +
+              '</div>' +
+              '</div>'
+          }).join('')
+          document.getElementById('file-modal').classList.remove('hidden')
+        }
+        function closeFileModal() {
+          document.getElementById('file-modal').classList.add('hidden')
+        }
+        async function uploadFileSlot(slot) {
+          const input = document.getElementById('fm-input-' + slot)
+          if (!input.files || !input.files[0]) return
+          const file = input.files[0]
+          if (file.size > 20 * 1024 * 1024) { alert('파일 크기가 20MB를 초과합니다'); return }
+          const btn = input.parentElement.querySelector('div')
+          btn.innerHTML = '<i class="fas fa-spinner fa-spin text-emerald-500 mr-1"></i><span class="text-xs text-emerald-600">업로드 중...</span>'
+          const fd = new FormData()
+          fd.append('file', file)
+          const res = await fetch('/api/files/upload/' + _fileGuideId + '/' + slot, { method: 'POST', body: fd })
+          const data = await res.json()
+          if (data.ok) {
+            btn.innerHTML = '<i class="fas fa-check text-emerald-500 mr-1"></i><span class="text-xs text-emerald-600">업로드 완료!</span>'
+            setTimeout(() => location.reload(), 800)
+          } else {
+            btn.innerHTML = '<span class="text-xs text-red-500">실패: ' + data.error + '</span>'
+          }
+        }
+        async function deleteFile(guideId, slot) {
+          if (!confirm('파일을 삭제하시겠습니까?')) return
+          const res = await fetch('/api/files/delete/' + guideId + '/' + slot, { method: 'DELETE' })
+          const data = await res.json()
+          if (data.ok) location.reload()
+          else alert('삭제 실패: ' + data.error)
+        }
+      `}</script>
 
       {/* ══ 유저 상세 모달 ══ */}
       <div id="user-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
@@ -420,17 +581,98 @@ adminRoute.get('/', async (c) => {
           btn.classList.remove('text-gray-600')
         }
 
+        // ── 서브카테고리 동적 업데이트 ───────────────────
+        const SUB_CATS = {
+          '세무회계':  ['전표/결산','부가세','법인세','원천세/연말정산','자금관리'],
+          '인사노무':  ['채용/퇴사','급여/4대보험','근태/연차','근로계약/사규','성과평가'],
+          '총무':      ['자산/시설','법무/인장','복리후생','구매관리'],
+          '회계·세무': ['전표/결산','부가세','법인세','원천세/연말정산','자금관리'],
+          '인사·노무': ['채용/퇴사','급여/4대보험','근태/연차','근로계약/사규','성과평가'],
+          '총무·행정': ['자산/시설','법무/인장','복리후생','구매관리'],
+          '세금·신고': ['부가세','법인세','종합소득세'],
+          '급여관리':  ['급여계산','4대보험','원천세'],
+          '입사 체크리스트': ['입사준비','서류체크','OJT'],
+        }
+        function updateSubcategory(selectedValue) {
+          const cat = document.getElementById('guide-category').value
+          const sel = document.getElementById('guide-subcategory')
+          const prev = sel.value
+          sel.innerHTML = '<option value="">선택 안함</option>'
+          const subs = SUB_CATS[cat] || []
+          subs.forEach(s => {
+            const o = document.createElement('option')
+            o.value = s; o.textContent = s
+            if (s === (selectedValue || prev)) o.selected = true
+            sel.appendChild(o)
+          })
+        }
+
+        // ── 파일 업로드 UI ───────────────────────────────
+        let pendingFiles = {} // { slot: File }
+        function toggleFileUpload() {
+          const sec = document.getElementById('file-upload-section')
+          const lbl = document.getElementById('file-toggle-label')
+          const isHidden = sec.classList.contains('hidden')
+          sec.classList.toggle('hidden')
+          lbl.textContent = isHidden ? '파일 첨부 접기' : '실무 양식 파일 첨부하기'
+        }
+        function handleFileSelect(slot) {
+          const input = document.getElementById('file-input-' + slot)
+          const label = document.getElementById('file-label-' + slot)
+          if (input.files && input.files[0]) {
+            const f = input.files[0]
+            if (f.size > 20 * 1024 * 1024) {
+              alert('파일 크기가 20MB를 초과합니다: ' + f.name)
+              input.value = ''
+              return
+            }
+            pendingFiles[slot] = f
+            const ext = f.name.split('.').pop().toLowerCase()
+            const iconMap = { xlsx:'🟢', xls:'🟢', zip:'🟠', rar:'🟠', pdf:'🔴', docx:'🔵', hwp:'🟦', hwpx:'🟦' }
+            const icon = iconMap[ext] || '📎'
+            label.innerHTML = icon + ' <span class="text-gray-700 font-medium">' + f.name + '</span> <span class="text-gray-400 text-xs">(' + (f.size/1024).toFixed(0) + 'KB)</span>'
+          }
+        }
+        function clearFileSlot(slot) {
+          const input = document.getElementById('file-input-' + slot)
+          const label = document.getElementById('file-label-' + slot)
+          input.value = ''
+          delete pendingFiles[slot]
+          label.innerHTML = '<i class="fas fa-paperclip text-gray-400"></i><span>파일 선택 (슬롯 ' + slot + ')</span>'
+        }
+        async function uploadPendingFiles(guideId) {
+          const slots = Object.keys(pendingFiles)
+          if (slots.length === 0) return
+          for (const slot of slots) {
+            const file = pendingFiles[slot]
+            const fd = new FormData()
+            fd.append('file', file)
+            try {
+              const res = await fetch('/api/files/upload/' + guideId + '/' + slot, { method: 'POST', body: fd })
+              const data = await res.json()
+              if (!data.ok) console.error('파일 업로드 실패 (슬롯 ' + slot + '):', data.error)
+            } catch(e) { console.error('파일 업로드 에러:', e) }
+          }
+          pendingFiles = {}
+        }
+
         // ── 가이드 모달 ──────────────────────────────────
         function openGuideModal() {
           document.getElementById('guide-id').value = ''
           document.getElementById('modal-title').textContent = '새 가이드 추가'
           document.getElementById('guide-title').value = ''
-          document.getElementById('guide-category').value = '회계·세무'
+          document.getElementById('guide-category').value = '세무회계'
+          updateSubcategory('')
           document.getElementById('guide-status').value = 'published'
           document.getElementById('guide-summary').value = ''
           document.getElementById('guide-content').value = ''
           document.getElementById('guide-premium').checked = false
           document.getElementById('modal-error').classList.add('hidden')
+          // 파일 슬롯 초기화
+          pendingFiles = {}
+          for (let s = 1; s <= 3; s++) clearFileSlot(s)
+          document.getElementById('file-upload-section').classList.add('hidden')
+          document.getElementById('file-toggle-label').textContent = '실무 양식 파일 첨부하기'
           document.getElementById('guide-modal').classList.remove('hidden')
         }
         function closeGuideModal() {
@@ -440,12 +682,15 @@ adminRoute.get('/', async (c) => {
           document.getElementById('guide-id').value = g.id
           document.getElementById('modal-title').textContent = '가이드 수정'
           document.getElementById('guide-title').value = g.title || ''
-          document.getElementById('guide-category').value = g.category || '회계·세무'
+          document.getElementById('guide-category').value = g.category || '세무회계'
+          updateSubcategory(g.subcategory || '')
           document.getElementById('guide-status').value = g.status || 'published'
           document.getElementById('guide-summary').value = g.summary || ''
           document.getElementById('guide-content').value = g.content || ''
           document.getElementById('guide-premium').checked = !!g.is_premium
           document.getElementById('modal-error').classList.add('hidden')
+          pendingFiles = {}
+          for (let s = 1; s <= 3; s++) clearFileSlot(s)
           document.getElementById('guide-modal').classList.remove('hidden')
         }
 
@@ -478,6 +723,12 @@ adminRoute.get('/', async (c) => {
           })
           const data = await res.json()
           if (data.ok) {
+            const guideId = data.id || id
+            // 파일 업로드 (있는 경우)
+            if (guideId && Object.keys(pendingFiles).length > 0) {
+              btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 파일 업로드 중...'
+              await uploadPendingFiles(guideId)
+            }
             closeGuideModal()
             location.reload()
           } else {
@@ -557,12 +808,14 @@ adminRoute.get('/', async (c) => {
         }
 
         // ── CSV 다운로드 ─────────────────────────────────
-        function downloadUsersCSV() {
-          window.location.href = '/admin/api/export/users'
-        }
-        function downloadPaymentsCSV() {
-          window.location.href = '/admin/api/export/payments'
-        }
+        function downloadUsersCSV() { window.location.href = '/admin/api/export/users' }
+        function downloadPaymentsCSV() { window.location.href = '/admin/api/export/payments' }
+
+        // ── 가이드 테이블에 파일 버튼 추가 표시 ──────────────
+        // (파일 슬롯이 있는 가이드는 📎 아이콘 표시 - 서버에서 이미 렌더링됨)
+
+        // ── 페이지 로드 시 서브카테고리 초기화 ───────────────
+        document.addEventListener('DOMContentLoaded', () => updateSubcategory(''))
       `}</script>
     </div>,
     { title: '관리자 | BizReady' }
@@ -583,18 +836,19 @@ adminRoute.post('/api/guides', async (c) => {
   if (!body.content?.trim()) return c.json({ ok: false, error: '본문이 필요합니다' }, 400)
 
   const db = getSupabaseAdmin(c.env)
-  const { error } = await db.from('guides').insert({
+  const { data, error } = await db.from('guides').insert({
     title: body.title.trim(),
-    category: body.category || '회계·세무',
+    category: body.category || '세무회계',
+    subcategory: body.subcategory || '',
     summary: body.summary?.trim() || '',
     content: body.content.trim(),
     is_premium: body.is_premium ?? false,
     status: body.status || 'published',
     updated_by: auth.user.email,
     updated_at: new Date().toISOString(),
-  })
+  }).select('id').single()
   if (error) return c.json({ ok: false, error: error.message }, 500)
-  return c.json({ ok: true })
+  return c.json({ ok: true, id: data?.id })
 })
 
 // PUT /admin/api/guides/:id — 가이드 수정
@@ -612,6 +866,7 @@ adminRoute.put('/api/guides/:id', async (c) => {
   const updateData: any = { updated_by: auth.user.email, updated_at: new Date().toISOString() }
   if (body.title !== undefined) updateData.title = body.title.trim()
   if (body.category !== undefined) updateData.category = body.category
+  if (body.subcategory !== undefined) updateData.subcategory = body.subcategory
   if (body.summary !== undefined) updateData.summary = body.summary
   if (body.content !== undefined) updateData.content = body.content.trim()
   if (body.is_premium !== undefined) updateData.is_premium = body.is_premium

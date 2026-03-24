@@ -10,6 +10,8 @@ import checklistRoute from './routes/checklist'
 import paymentRoute   from './routes/payment'
 import paymentApi     from './routes/payment-api'
 import adminRoute     from './routes/admin'
+import fileApi        from './routes/file-api'
+import calendarRoute  from './routes/calendar'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -48,6 +50,9 @@ app.post('/api/auth/signup', async (c) => {
 // ── 결제 완료 API (세션 미들웨어 내부에서 자체 검증) ──
 app.route('/api/payment', paymentApi)
 
+// ── 파일 업로드/다운로드 API ──────────────────────────
+app.route('/api/files', fileApi)
+
 // ── 관리자 라우트 (lsol3264@gmail.com 전용) ───────
 app.route('/admin', adminRoute)
 
@@ -65,6 +70,7 @@ app.route('/dashboard/guide',     guideRoute)
 app.route('/dashboard/search',    searchRoute)
 app.route('/dashboard/checklist', checklistRoute)
 app.route('/dashboard/payment',   paymentRoute)
+app.route('/dashboard/calendar',  calendarRoute)
 app.route('/dashboard',           dashboardRoute)
 
 // ── 루트 리다이렉트 ─────────────────────────────
