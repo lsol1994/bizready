@@ -19,6 +19,8 @@ node_modules/
 .env
 .env.production
 .dev.vars
+# wrangler 실제 시크릿은 Cloudflare Dashboard에서 관리
+# wrangler.jsonc 는 더미값으로 커밋 (실제값은 .dev.vars 또는 wrangler secret put)
 
 # logs
 logs/
