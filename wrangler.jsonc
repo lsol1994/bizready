@@ -1,18 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "bizready",
   "compatibility_date": "2026-03-20",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
-  ],
-  "vars": {
-    "SUPABASE_URL": "https://blvhpajeaelvmgfglivk.supabase.co",
-    "SUPABASE_ANON_KEY": "sb_publishable_hXSJE5IOVVOwYEoIrhPIvw_b3nYUBqd",
-    "SUPABASE_SERVICE_ROLE_KEY": "YOUR_SUPABASE_SERVICE_ROLE_KEY",
-    "PORTONE_V2_STORE_ID": "store-7b370e7d-683d-4e5d-a75e-47f254cf91fe",
-    "PORTONE_V2_CHANNEL_KEY_KAKAO": "channel-key-e379d514-8869-4f9b-a701-63c95e81ffc9",
-    "PORTONE_V2_CHANNEL_KEY_TOSS": "channel-key-f56682af-9444-478f-86f2-5a53e91c5e19",
-    "PORTONE_V2_API_SECRET": "YOUR_PORTONE_V2_API_SECRET"
-  }
+  ]
+  // 환경변수는 Cloudflare Pages Secret으로 관리 (wrangler pages secret put)
+  // SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+  // PORTONE_V2_STORE_ID, PORTONE_V2_CHANNEL_KEY_KAKAO, PORTONE_V2_CHANNEL_KEY_TOSS, PORTONE_V2_API_SECRET
 }
