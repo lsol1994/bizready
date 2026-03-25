@@ -1,18 +1,19 @@
 import { Hono } from 'hono'
 import { parseSessionCookie } from './lib/session'
-import authRoutes     from './routes/auth'
-import loginRoute     from './routes/login'
-import dashboardRoute from './routes/dashboard'
-import archiveRoute   from './routes/archive'
-import guideRoute     from './routes/guide'
-import searchRoute    from './routes/search'
-import checklistRoute from './routes/checklist'
-import paymentRoute   from './routes/payment'
-import paymentApi     from './routes/payment-api'
-import adminRoute     from './routes/admin'
-import fileApi        from './routes/file-api'
-import calendarRoute  from './routes/calendar'
-import memoRoute      from './routes/memo'
+import authRoutes        from './routes/auth'
+import loginRoute        from './routes/login'
+import resetPasswordRoute from './routes/reset-password'
+import dashboardRoute    from './routes/dashboard'
+import archiveRoute      from './routes/archive'
+import guideRoute        from './routes/guide'
+import searchRoute       from './routes/search'
+import checklistRoute    from './routes/checklist'
+import paymentRoute      from './routes/payment'
+import paymentApi        from './routes/payment-api'
+import adminRoute        from './routes/admin'
+import fileApi           from './routes/file-api'
+import calendarRoute     from './routes/calendar'
+import memoRoute         from './routes/memo'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -23,6 +24,9 @@ app.route('/auth', authRoutes)
 
 // ── 로그인 페이지 ──────────────────────────────
 app.route('/login', loginRoute)
+
+// ── 비밀번호 재설정 페이지 (인증 불필요) ────────
+app.route('/reset-password', resetPasswordRoute)
 
 // ── 회원가입 API: 가입 즉시 이메일 인증 처리 ────────
 // 클라이언트에서 signUp() 후 이 엔드포인트를 호출 → service_role로 email_confirm 강제 처리

@@ -528,9 +528,11 @@ async function sendResetEmail() {
   const email = document.getElementById('reset-email').value.trim()
   const msg   = document.getElementById('reset-msg')
   if (!email) return
-  dbgLog('비밀번호 재설정 요청, redirectTo', REDIRECT_TO)
+  // ★ 비밀번호 재설정 전용 URL: /reset-password (새 비밀번호 입력 페이지)
+  const RESET_REDIRECT = window.location.origin + '/reset-password'
+  dbgLog('비밀번호 재설정 요청, redirectTo', RESET_REDIRECT)
   const { error } = await client.auth.resetPasswordForEmail(email, {
-    redirectTo: REDIRECT_TO
+    redirectTo: RESET_REDIRECT
   })
   msg.classList.remove('hidden')
   if (error) {

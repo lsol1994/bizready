@@ -103,6 +103,15 @@ auth.get('/callback', async (c) => {
     // ── CASE 1: Hash fragment token (Google OAuth implicit flow) ── 최우선 처리
     if (hashToken) {
       log('Hash token 감지 → setSession 시도 (type=' + hashType + ')')
+
+      // ★ 비밀번호 재설정 recovery 토큰: /reset-password 로 위임
+      if (hashType === 'recovery') {
+        log('recovery 타입 감지 → /reset-password 로 이동')
+        // hash fragment를 그대로 붙여서 리다이렉트
+        location.href = '/reset-password' + location.hash
+        return
+      }
+
       try {
         const { data, error } = await client.auth.setSession({
           access_token:  hashToken,
@@ -122,6 +131,15 @@ auth.get('/callback', async (c) => {
     // ⚠️ Google OAuth가 implicit flow이므로 여기 도달하면 이메일 인증 코드
     if (code) {
       log('PKCE code 감지 → exchangeCodeForSession 시도')
+
+      // ★ PKCE recovery: type=recovery 쿼리가 있으면 /reset-password 로 위임
+      const typeParam = urlParams.get('type')
+      if (typeParam === 'recovery') {
+        log('PKCE recovery 감지 → /reset-password 로 이동')
+        location.href = '/reset-password' + location.search
+        return
+      }
+
       document.getElementById('desc').textContent = '이메일 인증 처리 중...'
       try {
         const { data, error } = await client.auth.exchangeCodeForSession(code)
