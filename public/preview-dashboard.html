@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>대시보드 홈 개선 v2 미리보기 | BizReady</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Apple SD Gothic Neo', 'Pretendard', -apple-system, sans-serif; background: #f1f5f9; }
+
+    /* ══ 레이아웃 ══ */
+    .layout { display: flex; height: 100vh; overflow: hidden; }
+    .sidebar { width: 230px; min-height: 100vh; background: #0f172a; display: flex; flex-direction: column; flex-shrink: 0; }
+    .main    { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ══ 사이드바 ══ */
+    .sb-logo { padding: 18px 18px 12px; border-bottom: 1px solid #1e293b; }
+    .sb-brand { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .sb-plan  { font-size: 9px; background: #2563eb; color: #fff; border-radius: 20px; padding: 1px 7px; margin-left: 6px; font-weight: 700; }
+    .sb-sub   { font-size: 10px; color: #475569; margin-top: 3px; }
+    .sb-nav   { flex: 1; padding: 10px 0; overflow-y: auto; }
+    .nav-grp  { font-size: 9px; font-weight: 700; color: #475569; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 16px 3px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 16px; font-size: 12px; color: #94a3b8; cursor: pointer; border-left: 3px solid transparent; transition: all 0.12s; }
+    .nav-item:hover { background: #1e293b; color: #e2e8f0; }
+    .nav-item.active { background: rgba(37,99,235,0.15); color: #93c5fd; border-left-color: #3b82f6; font-weight: 600; }
+    .nav-badge { margin-left: auto; font-size: 9px; background: #1e293b; color: #64748b; border-radius: 20px; padding: 1px 6px; }
+    .nav-new   { margin-left: auto; font-size: 8px; background: #1d4ed8; color: #bfdbfe; border-radius: 4px; padding: 1px 5px; font-weight: 700; }
+    .sb-footer { padding: 12px 16px 16px; border-top: 1px solid #1e293b; }
+    .sb-user   { display: flex; align-items: center; gap: 9px; }
+    .sb-avatar { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+    .sb-uname  { font-size: 12px; color: #e2e8f0; font-weight: 600; }
+    .sb-email  { font-size: 10px; color: #475569; margin-top: 1px; }
+
+    /* ══ TOP BAR ══ */
+    .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 28px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; position: sticky; top: 0; z-index: 20; }
+    .topbar-search { flex: 1; position: relative; max-width: 520px; }
+    .topbar-search input { width: 100%; padding: 9px 16px 9px 38px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; color: #374151; background: #f8fafc; outline: none; transition: all 0.15s; }
+    .topbar-search input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+    .topbar-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 12px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .notif-btn { width: 36px; height: 36px; border-radius: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; font-size: 14px; transition: all 0.12s; position: relative; }
+    .notif-btn:hover { background: #eff6ff; border-color: #bfdbfe; color: #3b82f6; }
+    .notif-dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; background: #ef4444; border-radius: 50%; border: 1.5px solid #fff; }
+    .avatar-btn { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; cursor: pointer; border: 2.5px solid #bfdbfe; transition: all 0.15s; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+    .avatar-btn:hover { transform: scale(1.06); box-shadow: 0 4px 14px rgba(59,130,246,0.4); }
+
+    /* ══ 스크롤 영역 ══ */
+    .scroll-area { flex: 1; overflow-y: auto; padding: 22px 28px 32px; }
+
+    /* ══ 공지 배너 ══ */
+    .notice { background: linear-gradient(90deg, #fef3c7, #fde68a20); border: 1px solid #fcd34d; border-radius: 12px; padding: 11px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .notice .close { margin-left: auto; cursor: pointer; color: #92400e; font-size: 11px; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(180,83,9,0.08); border: none; flex-shrink: 0; }
+    .notice .close:hover { background: rgba(180,83,9,0.16); }
+
+    /* ══ 섹션 헤더 ══ */
+    .sec-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .sec-hd h2 { font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+    .sec-hd a, .sec-hd span.link { font-size: 12px; color: #3b82f6; text-decoration: none; cursor: pointer; }
+    .sec-hd a:hover { text-decoration: underline; }
+
+    /* ══ 섹션 1: D-Day 대형 카드 ══ */
+    .dday-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .dday-card { border-radius: 16px; padding: 20px 22px; border: 1px solid #e2e8f0; border-left-width: 5px; background: #fff; cursor: pointer; transition: all 0.18s; text-decoration: none; display: block; }
+    .dday-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.10); }
+    .dday-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .dday-tag { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+    .dday-icon-wrap { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; }
+    .dday-num { font-size: 36px; font-weight: 900; line-height: 1; letter-spacing: -1px; margin-bottom: 6px; }
+    .dday-title { font-size: 13px; font-weight: 600; color: #374151; line-height: 1.4; margin-bottom: 10px; }
+    .dday-date { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px; }
+
+    /* ══ 섹션 2: 업무 카테고리 ══ */
+    .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+    .cat-card { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; padding: 18px 16px; cursor: pointer; transition: all 0.15s; }
+    .cat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .cat-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cat-icon { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .cat-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .cat-desc { font-size: 11px; color: #64748b; margin-bottom: 8px; line-height: 1.4; }
+    .cat-cnt  { font-size: 11px; color: #3b82f6; font-weight: 700; }
+
+    /* ══ 섹션 3: 최근 열람 가이드 ══ */
+    .recent-box { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 28px; }
+    .recent-row { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.1s; }
+    .recent-row:last-child { border-bottom: none; }
+    .recent-row:hover { background: #f8fafc; }
+    .recent-thumb { width: 40px; height: 40px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+    .recent-body { flex: 1; }
+    .recent-meta { font-size: 10px; color: #94a3b8; font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+    .recent-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+    .hot { background: #fee2e2; color: #b91c1c; }
+    .new-b { background: #dbeafe; color: #1d4ed8; }
+    .recent-date { font-size: 11px; color: #94a3b8; margin-left: auto; white-space: nowrap; padding-left: 12px; }
+    .recent-arr  { color: #d1d5db; font-size: 11px; margin-left: 6px; }
+
+    /* ══ 섹션 4: 2열 분할 (추천+업데이트) ══ */
+    .bottom-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* 추천 가이드 카드 */
+    .feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .feat-card { background: #fff; border-radius: 13px; border: 1px solid #e2e8f0; padding: 16px; cursor: pointer; transition: all 0.15s; }
+    .feat-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .feat-cat { font-size: 9px; font-weight: 800; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
+    .feat-title { font-size: 12px; font-weight: 700; color: #1e293b; line-height: 1.4; margin-bottom: 10px; }
+    .feat-foot  { display: flex; align-items: center; justify-content: space-between; }
+    .feat-stat  { font-size: 10px; color: #94a3b8; display: flex; align-items: center; gap: 8px; }
+    .feat-stat i { font-size: 9px; }
+
+    /* 최근 업데이트 리스트 */
+    .upd-box { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
+    .upd-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background 0.1s; }
+    .upd-row:last-child { border-bottom: none; }
+    .upd-row:hover { background: #f8fafc; }
+    .upd-body { flex: 1; }
+    .upd-cat  { font-size: 10px; color: #94a3b8; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .upd-title { font-size: 12px; font-weight: 600; color: #1e293b; margin-top: 1px; }
+
+    /* ══ 내 현황 모달 ══ */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 50; display: none; align-items: flex-start; justify-content: flex-end; padding: 60px 28px 0; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 18px; width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden; animation: slideDown 0.22s ease; }
+    @keyframes slideDown { from { opacity:0; transform: translateY(-12px) scale(0.97); } to { opacity:1; transform: none; } }
+    .modal-head { padding: 16px 20px 12px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+    .modal-head h3 { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .modal-close { cursor: pointer; color: #94a3b8; font-size: 14px; padding: 4px 6px; border-radius: 6px; border: none; background: none; }
+    .modal-close:hover { background: #f1f5f9; color: #374151; }
+    .modal-body { padding: 16px 20px 20px; }
+    .modal-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+    .mstat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: flex; align-items: center; gap: 10px; }
+    .mstat-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .mstat-val  { font-size: 20px; font-weight: 800; color: #1e293b; line-height: 1; }
+    .mstat-lbl  { font-size: 11px; color: #64748b; margin-top: 2px; }
+    .mstat-delta { font-size: 10px; font-weight: 600; margin-top: 2px; }
+    .up   { color: #16a34a; }
+    .down { color: #dc2626; }
+    .neu  { color: #64748b; }
+    .modal-footer { border-top: 1px solid #f1f5f9; padding: 12px 20px; }
+    .modal-link { font-size: 12px; color: #3b82f6; font-weight: 600; display: flex; align-items: center; gap: 5px; cursor: pointer; text-decoration: none; }
+    .modal-link:hover { text-decoration: underline; }
+
+    /* 미리보기 배지 */
+    .preview-tag { position: fixed; bottom: 18px; right: 18px; background: #0f172a; color: #94a3b8; font-size: 10px; font-weight: 700; padding: 7px 13px; border-radius: 20px; letter-spacing: 0.06em; box-shadow: 0 4px 16px rgba(0,0,0,0.22); z-index: 9999; }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .dday-grid, .cat-grid { grid-template-columns: repeat(2,1fr); }
+      .bottom-split, .feat-grid { grid-template-columns: 1fr; }
+      .scroll-area { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     내 현황 모달
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="myModal" onclick="closeModal(event)">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📊 내 현황</h3>
+      <button class="modal-close" onclick="toggleModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stat-grid">
+
+        <div class="mstat">
+          <div class="mstat-icon" style="background:#eff6ff;"><i class="fas fa-eye" style="color:#3b82f6;"></i></div>
+          <div>
+            <div class="mstat-val">12</div>
+            <div class="mstat-lbl">열람한 가이드</div>
+            <div class="mstat-delta up"><i class="fas fa-arrow-up" style="font-size:8px;"></i> 이번 주 3건</div>
+          </div>
+        </div>
+
+        <div class="mstat">
+          <div class="mstat-icon" style="background:#f0fdf4;"><i class="fas fa-bookmark" style="color:#16a34a;"></i></div>
+          <div>
+            <div class="mstat-val">5</div>
+            <div class="mstat-lbl">북마크</div>
+            <div class="mstat-delta up"><i class="fas fa-arrow-up" style="font-size:8px;"></i> 최근 추가 2건</div>
+          </div>
+        </div>
+
+        <div class="mstat">
+          <div class="mstat-icon" style="background:#fdf4ff;"><i class="fas fa-sticky-note" style="color:#9333ea;"></i></div>
+          <div>
+            <div class="mstat-val">3</div>
+            <div class="mstat-lbl">작성한 메모</div>
+            <div class="mstat-delta neu">최근 업데이트 없음</div>
+          </div>
+        </div>
+
+        <div class="mstat">
+          <div class="mstat-icon" style="background:#fff7ed;"><i class="fas fa-calendar-check" style="color:#ea580c;"></i></div>
+          <div>
+            <div class="mstat-val">D-14</div>
+            <div class="mstat-lbl">다음 세무 마감</div>
+            <div class="mstat-delta down"><i class="fas fa-exclamation-circle" style="font-size:8px;"></i> 부가세 신고</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <a class="modal-link" href="#">마이페이지에서 더 보기 <i class="fas fa-arrow-right" style="font-size:10px;"></i></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     레이아웃
+══════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div><span class="sb-brand">BizReady</span><span class="sb-plan">PRO</span></div>
+      <div class="sb-sub">경영지원 올인원 플랫폼</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-grp">메인</div>
+      <div class="nav-item active"><i class="fas fa-home fa-fw" style="font-size:12px;"></i> 대시보드</div>
+      <div class="nav-item"><i class="fas fa-calendar-alt fa-fw" style="font-size:12px;"></i> 업무 캘린더</div>
+      <div class="nav-item"><i class="fas fa-bell fa-fw" style="font-size:12px;"></i> 알림 설정</div>
+      <div class="nav-grp" style="margin-top:6px;">가이드</div>
+      <div class="nav-item"><i class="fas fa-book-open fa-fw" style="font-size:12px;"></i> 아카이브 <span class="nav-badge">87</span></div>
+      <div class="nav-item"><i class="fas fa-bookmark fa-fw" style="font-size:12px;"></i> 북마크 <span class="nav-badge">5</span></div>
+      <div class="nav-item"><i class="fas fa-search fa-fw" style="font-size:12px;"></i> 검색</div>
+      <div class="nav-grp" style="margin-top:6px;">업무도구</div>
+      <div class="nav-item"><i class="fas fa-clipboard-check fa-fw" style="font-size:12px;"></i> 입사 체크리스트</div>
+      <div class="nav-item"><i class="fas fa-sticky-note fa-fw" style="font-size:12px;"></i> 메모장</div>
+      <div class="nav-item"><i class="fas fa-calculator fa-fw" style="font-size:12px;"></i> 급여 계산기 <span class="nav-new">NEW</span></div>
+    </nav>
+    <div class="sb-footer">
+      <div class="sb-user">
+        <div class="sb-avatar">솔</div>
+        <div>
+          <div class="sb-uname">솔님</div>
+          <div class="sb-email">lsol3264@gmail.com</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 메인 -->
+  <div class="main">
+
+    <!-- ── TOP BAR ── -->
+    <div class="topbar">
+      <div class="topbar-search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="업무 키워드 검색..." />
+      </div>
+      <div class="topbar-right">
+        <div class="notif-btn">
+          <i class="fas fa-bell"></i>
+          <div class="notif-dot"></div>
+        </div>
+        <!-- 아바타: 클릭 → 내 현황 모달 -->
+        <div class="avatar-btn" onclick="toggleModal()" title="내 현황 보기">솔</div>
+      </div>
+    </div>
+
+    <!-- ── 스크롤 영역 ── -->
+    <div class="scroll-area">
+
+      <!-- 공지 배너 -->
+      <div class="notice" id="noticeBanner">
+        <span style="font-size:16px;flex-shrink:0;">📢</span>
+        <div style="flex:1;">
+          <span style="font-weight:700;color:#92400e;font-size:12px;">공지</span>
+          <span style="color:#78350f;font-size:12px;margin-left:8px;">2026년 1분기 부가세 확정신고 기간(4/1~4/25) 안내 — 미리 서류를 준비해 두세요!</span>
+        </div>
+        <span style="font-size:10px;color:#b45309;white-space:nowrap;">2026.03.26</span>
+        <button class="close" onclick="dismissNotice()"><i class="fas fa-times" style="font-size:10px;"></i></button>
+      </div>
+
+      <!-- ═══════ 섹션 1: D-Day 대형 카드 ═══════ -->
+      <div class="sec-hd">
+        <h2><i class="fas fa-calendar-alt" style="color:#3b82f6;font-size:13px;"></i> D-Day 업무 일정</h2>
+        <a href="#">캘린더 전체 보기 →</a>
+      </div>
+      <div class="dday-grid">
+
+        <!-- D-14 부가세 -->
+        <a class="dday-card" href="#" style="border-left-color:#ef4444;">
+          <div class="dday-top">
+            <span class="dday-tag" style="background:#fee2e2;color:#b91c1c;">재무·세금</span>
+            <div class="dday-icon-wrap" style="background:#fee2e2;">
+              <i class="fas fa-file-invoice-dollar" style="color:#ef4444;font-size:13px;"></i>
+            </div>
+          </div>
+          <div class="dday-num" style="color:#ef4444;">D-14</div>
+          <div class="dday-title">부가세 1기 확정신고</div>
+          <div class="dday-date"><i class="fas fa-calendar-alt"></i> 4월 25일 (금)</div>
+        </a>
+
+        <!-- D-3 4대보험 -->
+        <a class="dday-card" href="#" style="border-left-color:#d97706;">
+          <div class="dday-top">
+            <span class="dday-tag" style="background:#fef3c7;color:#92400e;">노무·4대보험</span>
+            <div class="dday-icon-wrap" style="background:#fef3c7;">
+              <i class="fas fa-users" style="color:#d97706;font-size:13px;"></i>
+            </div>
+          </div>
+          <div class="dday-num" style="color:#d97706;">D-3</div>
+          <div class="dday-title">3월분 4대보험 납부</div>
+          <div class="dday-date"><i class="fas fa-calendar-alt"></i> 3월 29일 (토)</div>
+        </a>
+
+        <!-- D-21 법인세 -->
+        <a class="dday-card" href="#" style="border-left-color:#3b82f6;">
+          <div class="dday-top">
+            <span class="dday-tag" style="background:#dbeafe;color:#1d4ed8;">총무·행정</span>
+            <div class="dday-icon-wrap" style="background:#dbeafe;">
+              <i class="fas fa-building" style="color:#3b82f6;font-size:13px;"></i>
+            </div>
+          </div>
+          <div class="dday-num" style="color:#3b82f6;">D-21</div>
+          <div class="dday-title">법인세 중간예납 신고</div>
+          <div class="dday-date"><i class="fas fa-calendar-alt"></i> 4월 16일 (목)</div>
+        </a>
+
+        <!-- D-35 원천세 -->
+        <a class="dday-card" href="#" style="border-left-color:#ef4444;">
+          <div class="dday-top">
+            <span class="dday-tag" style="background:#fee2e2;color:#b91c1c;">재무·세금</span>
+            <div class="dday-icon-wrap" style="background:#fee2e2;">
+              <i class="fas fa-file-invoice-dollar" style="color:#ef4444;font-size:13px;"></i>
+            </div>
+          </div>
+          <div class="dday-num" style="color:#ef4444;">D-35</div>
+          <div class="dday-title">원천세 신고·납부 (3월분)</div>
+          <div class="dday-date"><i class="fas fa-calendar-alt"></i> 4월 30일 (화)</div>
+        </a>
+
+      </div>
+
+      <!-- ═══════ 섹션 2: 업무 카테고리 ═══════ -->
+      <div class="sec-hd">
+        <h2><i class="fas fa-th-large" style="color:#8b5cf6;font-size:13px;"></i> 업무 카테고리</h2>
+        <a href="#">전체 보기 →</a>
+      </div>
+      <div class="cat-grid">
+
+        <div class="cat-card">
+          <div class="cat-top">
+            <div class="cat-icon" style="background:#dbeafe;"><i class="fas fa-calculator" style="color:#3b82f6;"></i></div>
+            <span class="cat-name">회계·세무</span>
+          </div>
+          <div class="cat-desc">전표처리, 세금계산서, 부가세 신고</div>
+          <div class="cat-cnt">24개 가이드 →</div>
+        </div>
+
+        <div class="cat-card">
+          <div class="cat-top">
+            <div class="cat-icon" style="background:#f3e8ff;"><i class="fas fa-users" style="color:#9333ea;"></i></div>
+            <span class="cat-name">인사·노무</span>
+          </div>
+          <div class="cat-desc">4대보험, 급여계산, 근로계약서</div>
+          <div class="cat-cnt">18개 가이드 →</div>
+        </div>
+
+        <div class="cat-card">
+          <div class="cat-top">
+            <div class="cat-icon" style="background:#dcfce7;"><i class="fas fa-building" style="color:#16a34a;"></i></div>
+            <span class="cat-name">총무·행정</span>
+          </div>
+          <div class="cat-desc">비품관리, 계약서, 공문서 작성</div>
+          <div class="cat-cnt">15개 가이드 →</div>
+        </div>
+
+        <div class="cat-card">
+          <div class="cat-top">
+            <div class="cat-icon" style="background:#ffedd5;"><i class="fas fa-file-invoice-dollar" style="color:#ea580c;"></i></div>
+            <span class="cat-name">세금·신고</span>
+          </div>
+          <div class="cat-desc">원천세, 법인세, 연말정산</div>
+          <div class="cat-cnt">12개 가이드 →</div>
+        </div>
+
+      </div>
+
+      <!-- ═══════ 섹션 3: 최근 열람 가이드 ═══════ -->
+      <div class="sec-hd">
+        <h2><i class="fas fa-clock" style="color:#f59e0b;font-size:13px;"></i> 최근 열람한 가이드</h2>
+        <a href="#">전체 보기 →</a>
+      </div>
+      <div class="recent-box">
+
+        <div class="recent-row">
+          <div class="recent-thumb" style="background:#eff6ff;"><i class="fas fa-calculator" style="color:#3b82f6;"></i></div>
+          <div class="recent-body">
+            <div class="recent-meta">
+              인사·노무 · 조회 248회
+              <span class="badge hot">HOT</span>
+            </div>
+            <div class="recent-title">4대보험 계산 방법과 요율 총정리</div>
+          </div>
+          <span class="recent-date">3월 25일</span>
+          <i class="fas fa-chevron-right recent-arr"></i>
+        </div>
+
+        <div class="recent-row">
+          <div class="recent-thumb" style="background:#f0fdf4;"><i class="fas fa-file-alt" style="color:#16a34a;"></i></div>
+          <div class="recent-body">
+            <div class="recent-meta">인사·노무 · 조회 183회</div>
+            <div class="recent-title">연차 발생 기준 및 수당 계산법</div>
+          </div>
+          <span class="recent-date">3월 24일</span>
+          <i class="fas fa-chevron-right recent-arr"></i>
+        </div>
+
+        <div class="recent-row">
+          <div class="recent-thumb" style="background:#fdf4ff;"><i class="fas fa-receipt" style="color:#9333ea;"></i></div>
+          <div class="recent-body">
+            <div class="recent-meta">
+              세금·신고 · 조회 97회
+              <span class="badge new-b">NEW</span>
+            </div>
+            <div class="recent-title">부가세 신고 기간과 준비 서류 체크리스트</div>
+          </div>
+          <span class="recent-date">3월 23일</span>
+          <i class="fas fa-chevron-right recent-arr"></i>
+        </div>
+
+      </div>
+
+      <!-- ═══════ 섹션 4: 2열 분할 ═══════ -->
+      <div class="bottom-split">
+
+        <!-- 왼쪽: 추천 가이드 -->
+        <div>
+          <div class="sec-hd">
+            <h2><i class="fas fa-star" style="color:#f59e0b;font-size:13px;"></i> 추천 가이드</h2>
+            <a href="#">전체 보기 →</a>
+          </div>
+          <div class="feat-grid">
+
+            <div class="feat-card">
+              <div class="feat-cat" style="background:#fee2e2;color:#b91c1c;">세금·신고</div>
+              <div class="feat-title">세금계산서 발행 A to Z — 전자세금계산서 의무 발행 기준</div>
+              <div class="feat-foot">
+                <div class="feat-stat">
+                  <span><i class="fas fa-eye"></i> 312</span>
+                  <span><i class="fas fa-heart" style="color:#f87171;"></i> 48</span>
+                </div>
+                <i class="fas fa-arrow-right" style="color:#3b82f6;font-size:11px;"></i>
+              </div>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-cat" style="background:#dbeafe;color:#1d4ed8;">인사·노무</div>
+              <div class="feat-title">신규 직원 4대보험 가입 처리 — 취득일 기준 신고 절차</div>
+              <div class="feat-foot">
+                <div class="feat-stat">
+                  <span><i class="fas fa-eye"></i> 201</span>
+                  <span><i class="fas fa-heart" style="color:#f87171;"></i> 31</span>
+                </div>
+                <i class="fas fa-arrow-right" style="color:#3b82f6;font-size:11px;"></i>
+              </div>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-cat" style="background:#dcfce7;color:#15803d;">급여관리</div>
+              <div class="feat-title">퇴직금 계산 방법과 지급 기준 — IRP 의무이전 포함</div>
+              <div class="feat-foot">
+                <div class="feat-stat">
+                  <span><i class="fas fa-eye"></i> 178</span>
+                  <span><i class="fas fa-heart" style="color:#f87171;"></i> 27</span>
+                </div>
+                <i class="fas fa-arrow-right" style="color:#3b82f6;font-size:11px;"></i>
+              </div>
+            </div>
+
+            <div class="feat-card">
+              <div class="feat-cat" style="background:#fef3c7;color:#92400e;">회계·세무</div>
+              <div class="feat-title">법인카드 사용 및 정산 방법 완벽 가이드</div>
+              <div class="feat-foot">
+                <div class="feat-stat">
+                  <span><i class="fas fa-eye"></i> 156</span>
+                  <span><i class="fas fa-heart" style="color:#f87171;"></i> 22</span>
+                </div>
+                <i class="fas fa-arrow-right" style="color:#3b82f6;font-size:11px;"></i>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 오른쪽: 최근 업데이트 가이드 -->
+        <div>
+          <div class="sec-hd">
+            <h2><i class="fas fa-sync-alt" style="color:#10b981;font-size:13px;"></i> 최근 업데이트 가이드</h2>
+            <a href="#">전체 보기 →</a>
+          </div>
+          <div class="upd-box">
+
+            <div class="upd-row">
+              <div style="width:34px;height:34px;border-radius:9px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-calculator" style="color:#3b82f6;font-size:13px;"></i>
+              </div>
+              <div class="upd-body">
+                <div class="upd-cat">회계·세무 <span class="badge hot">HOT</span></div>
+                <div class="upd-title">세금계산서 발행 A to Z</div>
+              </div>
+              <i class="fas fa-chevron-right" style="color:#d1d5db;font-size:10px;"></i>
+            </div>
+
+            <div class="upd-row">
+              <div style="width:34px;height:34px;border-radius:9px;background:#f3e8ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-users" style="color:#9333ea;font-size:13px;"></i>
+              </div>
+              <div class="upd-body">
+                <div class="upd-cat">인사·노무 <span class="badge new-b">NEW</span></div>
+                <div class="upd-title">신규 직원 4대보험 가입 처리</div>
+              </div>
+              <i class="fas fa-chevron-right" style="color:#d1d5db;font-size:10px;"></i>
+            </div>
+
+            <div class="upd-row">
+              <div style="width:34px;height:34px;border-radius:9px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-building" style="color:#16a34a;font-size:13px;"></i>
+              </div>
+              <div class="upd-body">
+                <div class="upd-cat">총무·행정</div>
+                <div class="upd-title">법인카드 사용 및 정산 방법</div>
+              </div>
+              <i class="fas fa-chevron-right" style="color:#d1d5db;font-size:10px;"></i>
+            </div>
+
+            <div class="upd-row">
+              <div style="width:34px;height:34px;border-radius:9px;background:#ffedd5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-file-invoice-dollar" style="color:#ea580c;font-size:13px;"></i>
+              </div>
+              <div class="upd-body">
+                <div class="upd-cat">세금·신고 <span class="badge new-b">NEW</span></div>
+                <div class="upd-title">부가세 신고 기간과 준비 서류</div>
+              </div>
+              <i class="fas fa-chevron-right" style="color:#d1d5db;font-size:10px;"></i>
+            </div>
+
+            <div class="upd-row">
+              <div style="width:34px;height:34px;border-radius:9px;background:#fce7f3;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-money-bill-wave" style="color:#db2777;font-size:13px;"></i>
+              </div>
+              <div class="upd-body">
+                <div class="upd-cat">급여관리</div>
+                <div class="upd-title">퇴직금 계산 방법과 지급 기준</div>
+              </div>
+              <i class="fas fa-chevron-right" style="color:#d1d5db;font-size:10px;"></i>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /bottom-split -->
+
+    </div><!-- /scroll-area -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- 미리보기 배지 -->
+<div class="preview-tag">🎨 PREVIEW v2 — 대시보드 홈 재구성안</div>
+
+<script>
+  // ── 모달 토글 ──
+  function toggleModal() {
+    var m = document.getElementById('myModal');
+    m.classList.toggle('open');
+  }
+  function closeModal(e) {
+    if (e.target === document.getElementById('myModal')) toggleModal();
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('myModal').classList.remove('open');
+  });
+
+  // ── 공지 닫기 ──
+  function dismissNotice() {
+    var b = document.getElementById('noticeBanner');
+    b.style.transition = 'opacity .25s, max-height .3s, margin .3s, padding .3s';
+    b.style.overflow = 'hidden';
+    b.style.maxHeight = b.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      b.style.opacity = '0';
+      b.style.maxHeight = '0';
+      b.style.padding = '0';
+      b.style.marginBottom = '0';
+    });
+    setTimeout(function() { b.style.display = 'none'; }, 310);
+  }
+</script>
+</body>
+</html>

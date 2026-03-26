@@ -100,9 +100,10 @@ dashboard.get('/', async (c) => {
   const sessionStr = parseSessionCookie(cookie)
   if (!sessionStr) return c.redirect('/login?error=unauthorized')
 
-  let userEmail = '사용자'
-  let userName  = ''
-  let isPaid    = false
+  let userEmail  = '사용자'
+  let userName   = ''
+  let isPaid     = false
+  let userId     = ''
 
   try {
     const sessionObj = JSON.parse(decodeURIComponent(sessionStr))
@@ -112,6 +113,7 @@ dashboard.get('/', async (c) => {
 
     userEmail = user.email ?? '사용자'
     userName  = (user.user_metadata?.full_name as string) || userEmail.split('@')[0]
+    userId    = user.id
 
     const { data: profile } = await supabase
       .from('user_profiles').select('is_paid').eq('id', user.id).single()
@@ -156,6 +158,11 @@ dashboard.get('/', async (c) => {
   // 공지 고유 ID — 공지 내용 바꿀 때 이 값만 바꾸면 전체 재표시
   const NOTICE_ID = 'notice_2026_q1_vat'
 
+  // 모달용: 가장 가까운 finance 카테고리 D-Day
+  const nextFinance = ddayItems.find((i: any) => i.category === 'finance')
+  const nextDdayTxt  = nextFinance ? `D-${nextFinance.dday}` : '-'
+  const nextDdayName = nextFinance ? nextFinance.title : '일정 없음'
+
   return c.render(
     <div class="flex h-screen overflow-hidden">
       <Sidebar userName={userName} userInitial={initial} isPaid={isPaid} currentPath="/dashboard" />
@@ -180,7 +187,13 @@ dashboard.get('/', async (c) => {
                 onkeydown="if(event.key==='Enter') window.location.href='/dashboard/search?q='+encodeURIComponent(this.value)"
               />
             </div>
-            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">{initial}</div>
+            <button
+              id="avatar-btn"
+              onclick="toggleMyStatusModal()"
+              class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold hover:bg-blue-700 transition-colors cursor-pointer border-2 border-blue-300 shadow-sm"
+              type="button"
+              title="내 현황 보기"
+            >{initial}</button>
           </div>
         </header>
 
@@ -237,66 +250,53 @@ dashboard.get('/', async (c) => {
             </div>
           </div>
 
-          {/* ── ② 통계 카드 ── */}
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-            {[
-              { icon: 'fa-book',         color: 'text-blue-600 bg-blue-50',   label: '총 가이드',     value: '87개' },
-              { icon: 'fa-check-square', color: 'text-green-600 bg-green-50', label: '완료 체크',     value: '0 / 20' },
-              { icon: 'fa-sticky-note',  color: 'text-purple-600 bg-purple-50',label: '내 메모',      value: '0개' },
-              { icon: 'fa-clock',        color: 'text-orange-600 bg-orange-50',label: '최근 업데이트', value: '오늘' },
-            ].map((stat) => (
-              <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
-                <div class={`w-10 h-10 ${stat.color} rounded-lg flex items-center justify-center mb-3`}>
-                  <i class={`fas ${stat.icon}`}></i>
-                </div>
-                <div class="text-xl md:text-2xl font-bold text-gray-800">{stat.value}</div>
-                <div class="text-gray-500 text-sm">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          {/* ── ② 통계 카드 제거됨 (아바타 클릭 → 모달로 이동) ── */}
 
-          {/* ── ③ D-day 업무 일정 위젯 ── */}
+          {/* ── ③ D-day 업무 일정 위젯 (카테고리 카드와 동일 크기) ── */}
           {ddayItems.length > 0 && (
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {ddayItems.map((item) => (
-                <a
-                  href="/dashboard/calendar"
-                  class="dday-card bg-white rounded-xl p-4 block border border-gray-100"
-                  style={`border-left: 4px solid ${item.borderColor};`}
-                >
-                  {/* 상단: 카테고리 라벨 + 아이콘 */}
-                  <div class="flex items-center justify-between mb-3">
-                    <span
-                      class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                      style={`background:${item.iconBg}; color:${item.iconText};`}
-                    >
-                      {item.label}
-                    </span>
-                    <div
-                      class="w-7 h-7 rounded-lg flex items-center justify-center"
-                      style={`background:${item.iconBg};`}
-                    >
-                      <i class={`fas ${item.iconCls} text-xs`} style={`color:${item.iconText};`}></i>
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                  <i class="fas fa-calendar-alt text-blue-500 text-xs"></i> D-Day 업무 일정
+                </h2>
+                <a href="/dashboard/calendar" class="text-blue-500 text-xs hover:underline">캘린더 전체 보기 →</a>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {ddayItems.map((item) => (
+                  <a
+                    href="/dashboard/calendar"
+                    class="dday-card bg-white rounded-xl block border border-gray-100"
+                    style={`border-left: 4px solid ${item.borderColor};`}
+                  >
+                    {/* 상단: 카테고리 라벨 + 아이콘 */}
+                    <div class="flex items-center justify-between mb-2">
+                      <span
+                        class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={`background:${item.iconBg}; color:${item.iconText};`}
+                      >
+                        {item.label}
+                      </span>
+                      <div
+                        class="w-6 h-6 rounded-md flex items-center justify-center"
+                        style={`background:${item.iconBg};`}
+                      >
+                        <i class={`fas ${item.iconCls} text-xs`} style={`color:${item.iconText};`}></i>
+                      </div>
                     </div>
-                  </div>
-                  {/* D-day 숫자 강조 */}
-                  <div class="mb-1">
-                    <span
-                      class="text-2xl font-black"
-                      style={`color:${item.accentColor};`}
-                    >
-                      D-{item.dday}
-                    </span>
-                  </div>
-                  {/* 일정 제목 */}
-                  <div class="font-semibold text-gray-800 text-sm leading-snug mb-1">{item.title}</div>
-                  {/* 마감일 */}
-                  <div class="text-gray-400 text-xs">
-                    <i class="fas fa-calendar-alt mr-1"></i>
-                    {new Date(item.deadline).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })}
-                  </div>
-                </a>
-              ))}
+                    {/* D-day 숫자 */}
+                    <div class="mb-1">
+                      <span class="text-xl font-black" style={`color:${item.accentColor};`}>D-{item.dday}</span>
+                    </div>
+                    {/* 일정 제목 */}
+                    <div class="font-semibold text-gray-800 text-xs leading-snug mb-1.5">{item.title}</div>
+                    {/* 마감일 */}
+                    <div class="text-gray-400 text-xs flex items-center gap-1">
+                      <i class="fas fa-calendar-alt"></i>
+                      {new Date(item.deadline).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })}
+                    </div>
+                  </a>
+                ))}
+              </div>
             </div>
           )}
 
@@ -362,10 +362,88 @@ dashboard.get('/', async (c) => {
         .notice-bar    { background: linear-gradient(90deg, #fef3c7, #fde68a); }
         .card-hover    { transition: all 0.15s; }
         .card-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-        /* D-day 카드 — 흰 배경 박스 + 좌측 컬러 보더 */
-        .dday-card              { transition: all 0.18s; display:block; }
-        .dday-card:hover        { box-shadow: 0 6px 20px rgba(0,0,0,0.10); transform: translateY(-2px); }
+        /* D-day 카드 — 카테고리 카드와 동일 크기/패딩 */
+        .dday-card              { transition: all 0.18s; display:block; padding: 14px 14px; }
+        .dday-card:hover        { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        /* 내 현황 모달 */
+        #my-status-modal { display:none; }
+        #my-status-modal.open { display:flex; }
+        @keyframes modalSlide {
+          from { opacity:0; transform:translateY(-8px) scale(0.97); }
+          to   { opacity:1; transform:none; }
+        }
+        #my-status-modal .modal-box { animation: modalSlide 0.2s ease; }
       `}</style>
+
+      {/* ── 내 현황 모달 ── */}
+      <div
+        id="my-status-modal"
+        class="fixed inset-0 bg-black/40 z-50 items-start justify-end pt-14 pr-4 md:pr-8"
+        onclick="closeMyStatusModal(event)"
+      >
+        <div class="modal-box bg-white rounded-2xl w-80 shadow-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-bold text-gray-800">📊 내 현황</h3>
+            <button onclick="toggleMyStatusModal()" class="text-gray-400 hover:text-gray-600 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100" type="button">
+              <i class="fas fa-times text-xs"></i>
+            </button>
+          </div>
+          <div class="p-4 grid grid-cols-2 gap-3">
+            <div class="bg-blue-50 rounded-xl p-3.5 flex items-center gap-3">
+              <div class="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-eye text-blue-500 text-sm"></i>
+              </div>
+              <div>
+                <div class="text-lg font-black text-gray-800" id="modal-view-cnt">-</div>
+                <div class="text-xs text-gray-500">열람한 가이드</div>
+                <div class="text-xs text-green-600 font-medium mt-0.5">이번 주 집계</div>
+              </div>
+            </div>
+            <div class="bg-green-50 rounded-xl p-3.5 flex items-center gap-3">
+              <div class="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-bookmark text-green-500 text-sm"></i>
+              </div>
+              <div>
+                <div class="text-lg font-black text-gray-800" id="modal-bm-cnt">-</div>
+                <div class="text-xs text-gray-500">북마크</div>
+                <div class="text-xs text-green-600 font-medium mt-0.5">저장한 가이드</div>
+              </div>
+            </div>
+            <div class="bg-purple-50 rounded-xl p-3.5 flex items-center gap-3">
+              <div class="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-sticky-note text-purple-500 text-sm"></i>
+              </div>
+              <div>
+                <div class="text-lg font-black text-gray-800" id="modal-memo-cnt">-</div>
+                <div class="text-xs text-gray-500">작성한 메모</div>
+                <div class="text-xs text-gray-400 font-medium mt-0.5">내 메모장</div>
+              </div>
+            </div>
+            <div class="bg-orange-50 rounded-xl p-3.5 flex items-center gap-3">
+              <div class="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-calendar-check text-orange-500 text-sm"></i>
+              </div>
+              <div>
+                <div class="text-sm font-black text-red-500" id="modal-dday-txt">{nextDdayTxt}</div>
+                <div class="text-xs text-gray-500">다음 세무 마감</div>
+                <div class="text-xs text-red-400 font-medium mt-0.5" id="modal-dday-name">{nextDdayName}</div>
+              </div>
+            </div>
+          </div>
+          <div class="px-5 py-3 border-t border-gray-100">
+            <a href="/dashboard/bookmark" class="text-xs text-blue-500 font-semibold flex items-center gap-1 hover:underline">
+              북마크 전체 보기 <i class="fas fa-arrow-right text-xs"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Supabase + User 변수 주입 (모달 데이터 로드용) */}
+      <script dangerouslySetInnerHTML={{ __html: `
+        window.__SUPABASE_URL__  = '${c.env.SUPABASE_URL}';
+        window.__SUPABASE_ANON__ = '${c.env.SUPABASE_ANON_KEY}';
+        window.__USER_ID__       = '${userId}';
+      `}} />
 
       {/* 공지 1회 표시 JS */}
       <script dangerouslySetInnerHTML={{ __html: `
@@ -377,6 +455,68 @@ dashboard.get('/', async (c) => {
   if (localStorage.getItem(STORAGE_KEY) === '1') {
     var b = document.getElementById('notice-banner');
     if (b) b.style.display = 'none';
+  }
+
+  /* ── 내 현황 모달 ── */
+  window.toggleMyStatusModal = function() {
+    var m = document.getElementById('my-status-modal');
+    if (!m) return;
+    var isOpen = m.classList.contains('open');
+    if (isOpen) {
+      m.classList.remove('open');
+    } else {
+      m.classList.add('open');
+      loadMyStatus();
+    }
+  };
+  window.closeMyStatusModal = function(e) {
+    if (e.target === document.getElementById('my-status-modal')) {
+      document.getElementById('my-status-modal').classList.remove('open');
+    }
+  };
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var m = document.getElementById('my-status-modal');
+      if (m) m.classList.remove('open');
+    }
+  });
+
+  /* 내 현황 데이터 로드 (Supabase REST) */
+  function loadMyStatus() {
+    var SURL = window.__SUPABASE_URL__;
+    var SKEY = window.__SUPABASE_ANON__;
+    var UID  = window.__USER_ID__;
+    if (!SURL || !SKEY || !UID) return;
+
+    /* 열람 가이드 수 (user_notes) */
+    fetch(SURL + '/rest/v1/user_notes?select=id&user_id=eq.' + UID + '&order=updated_at.desc', {
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('modal-view-cnt');
+      if (el) el.textContent = Array.isArray(d) ? d.length : '-';
+    }).catch(function(){});
+
+    /* 북마크 수 */
+    fetch(SURL + '/rest/v1/bookmarks?select=id&user_id=eq.' + UID, {
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('modal-bm-cnt');
+      if (el) el.textContent = Array.isArray(d) ? d.length : '-';
+    }).catch(function(){});
+
+    /* 메모 수 */
+    fetch(SURL + '/rest/v1/user_notes?select=id&user_id=eq.' + UID + '&note=not.is.null', {
+      headers: { 'apikey': SKEY, 'Authorization': 'Bearer ' + SKEY }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var el = document.getElementById('modal-memo-cnt');
+      if (el) el.textContent = Array.isArray(d) ? d.length : '-';
+    }).catch(function(){});
   }
 
   window.dismissNotice = function(id) {
