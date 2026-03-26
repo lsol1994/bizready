@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
-import { getSupabaseClientWithToken } from '../lib/supabase'
+import { getSupabaseClientWithToken, getSupabaseAdmin } from '../lib/supabase'
 import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
@@ -80,6 +80,49 @@ function markdownToHtml(md: string): string {
   html = injectLawLinks(html)
   return html
 }
+
+// ── 북마크 토글 POST (/dashboard/guide/:id/bookmark) ──────────
+guide.post('/:id/bookmark', async (c) => {
+  const cookie     = c.req.header('Cookie') ?? ''
+  const sessionStr = parseSessionCookie(cookie)
+  if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const guideId = c.req.param('id')
+  try {
+    let sessionObj: any
+    try { sessionObj = JSON.parse(sessionStr) }
+    catch { sessionObj = JSON.parse(decodeURIComponent(sessionStr)) }
+
+    const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+    // 이미 북마크 여부 확인
+    const { data: existing } = await supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('guide_id', guideId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (existing) {
+      // 북마크 해제
+      await supabase.from('bookmarks')
+        .delete()
+        .eq('guide_id', guideId)
+        .eq('user_id', user.id)
+      return c.json({ ok: true, bookmarked: false })
+    } else {
+      // 북마크 추가
+      const { error } = await supabase.from('bookmarks')
+        .insert({ guide_id: guideId, user_id: user.id })
+      if (error) return c.json({ ok: false, error: error.message }, 500)
+      return c.json({ ok: true, bookmarked: true })
+    }
+  } catch (e: any) {
+    return c.json({ ok: false, error: e.message }, 500)
+  }
+})
 
 // ── 좋아요 POST (/dashboard/guide/:id/like) ──────────────────
 guide.post('/:id/like', async (c) => {
@@ -185,6 +228,15 @@ guide.get('/:id', async (c) => {
       .eq('user_id', user.id)
       .maybeSingle()
     guideData._is_liked = !!likeData
+
+    // 북마크 여부 조회 (bookmarks 테이블)
+    const { data: bookmarkData } = await supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('guide_id', guideId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    guideData._is_bookmarked = !!bookmarkData
 
     const { data: noteData } = await supabase
       .from('user_notes').select('*').eq('user_id', user.id).eq('guide_id', guideId).single()
@@ -397,10 +449,14 @@ guide.get('/:id', async (c) => {
                 <hr class="my-3 border-gray-100" />
                 <button
                   id="bookmark-btn"
-                  class={`w-full text-sm font-medium py-2 rounded-lg transition-colors border ${userNote?.is_bookmarked ? 'bg-amber-50 text-amber-700 border-amber-300' : 'border-gray-200 text-gray-600 hover:border-amber-300 hover:text-amber-600'}`}
+                  class={`w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 ${
+                    guideData._is_bookmarked
+                      ? 'bg-amber-50 text-amber-600 border-amber-300 hover:bg-amber-100'
+                      : 'border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-500'
+                  }`}
                 >
-                  <i class="fas fa-bookmark mr-1"></i>
-                  <span id="bookmark-label">{userNote?.is_bookmarked ? '북마크 됨' : '북마크 추가'}</span>
+                  <i id="bookmark-icon" class={`fas fa-bookmark ${ guideData._is_bookmarked ? 'text-amber-500' : 'text-gray-300' }`}></i>
+                  <span id="bookmark-label">{guideData._is_bookmarked ? '저장됨' : '저장하기'}</span>
                 </button>
 
                 {/* 파일 없을 때 빈 영역 안내 */}
@@ -432,7 +488,7 @@ const SUPABASE_URL = '${c.env.SUPABASE_URL}'
 const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
 const GUIDE_ID = '${guideData.id}'
 const USER_ID = '${userId}'
-let isBookmarked = ${userNote?.is_bookmarked ?? false}
+let isBookmarked = ${guideData._is_bookmarked ?? false}
 let isLiked = ${guideData._is_liked ?? false}
 
 // Supabase CDN
@@ -461,23 +517,32 @@ script.onload = () => {
     }
   })
 
-  // 북마크 토글
+  // 북마크 토글 (bookmarks 테이블 API)
   document.getElementById('bookmark-btn').addEventListener('click', async () => {
-    isBookmarked = !isBookmarked
-    const memo = document.getElementById('memo-area').value
-    await client.from('user_notes').upsert({
-      user_id: USER_ID, guide_id: GUIDE_ID, memo,
-      is_bookmarked: isBookmarked, updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,guide_id' })
-    const btn = document.getElementById('bookmark-btn')
-    const lbl = document.getElementById('bookmark-label')
-    if (isBookmarked) {
-      btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-colors border bg-amber-50 text-amber-700 border-amber-300'
-      lbl.textContent = '북마크 됨'
-    } else {
-      btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-colors border border-gray-200 text-gray-600'
-      lbl.textContent = '북마크 추가'
-    }
+    const btn  = document.getElementById('bookmark-btn')
+    const lbl  = document.getElementById('bookmark-label')
+    const icon = document.getElementById('bookmark-icon')
+    btn.disabled = true
+    btn.style.opacity = '0.6'
+    try {
+      const res  = await fetch('/dashboard/guide/' + GUIDE_ID + '/bookmark', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        isBookmarked = data.bookmarked
+        if (isBookmarked) {
+          btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 bg-amber-50 text-amber-600 border-amber-300 hover:bg-amber-100'
+          icon.className = 'fas fa-bookmark text-amber-500'
+          lbl.textContent = '저장됨'
+          btn.style.transform = 'scale(1.04)'
+          setTimeout(() => { btn.style.transform = '' }, 200)
+        } else {
+          btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 border-gray-200 text-gray-500 hover:border-amber-300 hover:text-amber-500'
+          icon.className = 'fas fa-bookmark text-gray-300'
+          lbl.textContent = '저장하기'
+        }
+      }
+    } catch(e) { console.error('북마크 처리 실패', e) }
+    finally { btn.disabled = false; btn.style.opacity = '1' }
   })
 
   // ── 좋아요 토글 ──

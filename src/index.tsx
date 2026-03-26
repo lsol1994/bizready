@@ -16,6 +16,7 @@ import calendarRoute     from './routes/calendar'
 import memoRoute         from './routes/memo'
 import reminderRoute     from './routes/reminder'
 import settingsRoute     from './routes/settings'
+import bookmarkRoute    from './routes/bookmark'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -72,6 +73,7 @@ app.use('/dashboard/*', async (c, next) => {
 })
 
 // ── 대시보드 서브 라우트 ────────────────────────
+app.route('/dashboard/bookmark',  bookmarkRoute)
 app.route('/dashboard/archive',   archiveRoute)
 app.route('/dashboard/guide',     guideRoute)
 app.route('/dashboard/search',    searchRoute)

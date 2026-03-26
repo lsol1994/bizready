@@ -147,6 +147,11 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
           <span>지식 검색</span>
         </a>
 
+        <a href="/dashboard/bookmark" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/bookmark'))}>
+          <i class="fas fa-bookmark w-4 text-center text-sm"></i>
+          <span>저장한 가이드</span>
+        </a>
+
         <div class="pt-3 pb-1">
           <p class="sidebar-section-label px-2 text-xs font-semibold uppercase tracking-widest">내 계정</p>
         </div>
