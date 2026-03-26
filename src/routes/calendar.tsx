@@ -258,8 +258,7 @@ calendarRoute.get('/', async (c) => {
       `}</style>
 
       <script dangerouslySetInnerHTML={{ __html: `
-// ── 법정 반복 이벤트 ────────────────────────────
-const LEGAL = ${JSON.stringify(LEGAL_EVENTS)};
+// ── DB 기반 이벤트만 사용 (법정기한도 DB에서 관리)
 const IS_ADMIN = ${isAdmin};
 
 // 카테고리별 색상 (재무/회계=빨강, 노무=노랑, 총무/행정=파랑)
@@ -274,27 +273,7 @@ const CAT_COLORS = {
   tax:     '#ef4444',
 };
 
-function buildLegalEvents() {
-  const now  = new Date();
-  const year = now.getFullYear();
-  const events = [];
-  for (let y = year - 1; y <= year + 1; y++) {
-    LEGAL.forEach(e => {
-      const m = String(e.month).padStart(2,'0');
-      const d = String(e.day).padStart(2,'0');
-      // 카테고리 기반 색상 적용 (하드코딩 color 대신 CAT_COLORS 사용)
-      const evColor = CAT_COLORS[e.category] || '#6b7280';
-      events.push({
-        id: 'legal_' + y + '_' + e.title,
-        title: e.title,
-        start: y + '-' + m + '-' + d,
-        color: evColor,
-        extendedProps: { note: e.note, category: e.category, isLegal: true }
-      });
-    });
-  }
-  return events;
-}
+
 
 // ── FullCalendar 초기화 ───────────────────────────
 let calendar;
@@ -319,6 +298,8 @@ function mapCustomToFC(e) {
   };
 }
 
+// buildLegalEvents 제거 — 법정기한 일정은 DB(calendar_events)에서 관리
+
 async function initCalendar() {
   await loadCustomEvents();
   const el = document.getElementById('calendar');
@@ -331,7 +312,7 @@ async function initCalendar() {
       right:  'dayGridMonth,timeGridWeek,listMonth'
     },
     buttonText: { today: '오늘', month: '월', week: '주', list: '목록' },
-    events: [...buildLegalEvents(), ...customEvents.map(mapCustomToFC)],
+    events: customEvents.map(mapCustomToFC),
     eventClick: function(info) {
       showEventDetail(info.event);
     },
@@ -339,14 +320,13 @@ async function initCalendar() {
       updateUpcomingList(info.start, info.end);
     },
     eventDidMount: function(info) {
-      if (info.event.extendedProps.isLegal) {
-        const today     = new Date();
-        const eventDate = new Date(info.event.start);
-        const diffDays  = Math.ceil((eventDate - today) / (1000*60*60*24));
-        if (diffDays >= 0 && diffDays <= 3) {
-          info.el.style.outline = '2px solid #fbbf24';
-          info.el.title = '⚠️ D-' + diffDays + ' ' + info.event.title;
-        }
+      // D-3 이내 일정 강조 (법정기한 여부 무관)
+      const today     = new Date();
+      const eventDate = new Date(info.event.start);
+      const diffDays  = Math.ceil((eventDate - today) / (1000*60*60*24));
+      if (diffDays >= 0 && diffDays <= 3) {
+        info.el.style.outline = '2px solid #fbbf24';
+        info.el.title = '⚠️ D-' + diffDays + ' ' + info.event.title;
       }
     }
   });
@@ -428,15 +408,11 @@ function showEventDetail(event) {
     + (event.extendedProps.note
       ? '<div class="bg-gray-50 rounded-lg p-3 text-gray-700 leading-relaxed">' + event.extendedProps.note + '</div>'
       : '')
-    + (event.extendedProps.isLegal
-      ? '<div class="bg-red-50 border border-red-200 rounded-lg p-2 text-xs text-red-700">'
-        + '<i class="fas fa-exclamation-triangle mr-1"></i>법정 기한입니다. 기한 초과 시 가산세가 발생할 수 있습니다.</div>'
-      : '')
     + '</div>';
 
-  // 관리자이고 커스텀 이벤트인 경우 수정/삭제 버튼 표시
+  // 관리자이면 수정/삭제 버튼 항상 표시 (법정기한 포함)
   const adminActions = document.getElementById('ev-detail-admin-actions');
-  if (IS_ADMIN && !event.extendedProps.isLegal && _currentEventDbId) {
+  if (IS_ADMIN && _currentEventDbId) {
     adminActions.classList.remove('hidden');
     document.getElementById('ev-edit-btn').onclick = function() {
       closeEventDetail();
