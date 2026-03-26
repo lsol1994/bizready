@@ -4,25 +4,43 @@ import type { Env } from '../lib/supabase'
 
 const reminder = new Hono<{ Bindings: Env }>()
 
-// ── 세무 일정 마스터 (dashboard.tsx 와 동일하게 유지) ──────
+// ── 카테고리 타입 ────────────────────────────────────────
 type ScheduleCategory = 'finance' | 'labor' | 'general'
 
-const TAX_SCHEDULES: { title: string; deadline: string; category: ScheduleCategory }[] = [
-  // 재무/회계/세금/급여
-  { title: '원천세 신고·납부',         deadline: '2026-04-10', category: 'finance' },
-  { title: '부가세 1기 예정신고·납부', deadline: '2026-04-25', category: 'finance' },
-  { title: '급여 지급',                deadline: '2026-04-25', category: 'finance' },
-  { title: '법인세 신고·납부',         deadline: '2026-05-31', category: 'finance' },
-  { title: '종합소득세 확정신고',      deadline: '2026-05-31', category: 'finance' },
-  // 노무/4대보험/고용
-  { title: '4대보험 EDI 정산',         deadline: '2026-04-07', category: 'labor'   },
-  { title: '고용보험 지원금 신청',     deadline: '2026-04-30', category: 'labor'   },
-  { title: '4대보험 보수총액 신고',    deadline: '2026-05-15', category: 'labor'   },
-  // 총무/행정
-  { title: '비품 구매 예산 신청',      deadline: '2026-04-15', category: 'general' },
-  { title: '차량 정기 점검',           deadline: '2026-05-10', category: 'general' },
-  { title: '사무용품 재고 점검',       deadline: '2026-04-20', category: 'general' },
-]
+// calendar_events.category → ScheduleCategory 매핑
+function mapCategory(cat: string): ScheduleCategory {
+  if (cat === 'labor')                    return 'labor'
+  if (cat === 'tax' || cat === 'finance') return 'finance'
+  return 'general'
+}
+
+// ── 캘린더 DB에서 D-day 해당 일정 조회 ───────────────────
+async function fetchTodaySchedules(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  today: Date,
+  alertDays: number[]
+): Promise<{ title: string; deadline: string; category: ScheduleCategory; dday: number }[]> {
+  const maxDay = Math.max(...alertDays)
+  const futureLimit = new Date(today)
+  futureLimit.setDate(futureLimit.getDate() + maxDay)
+
+  const { data: events, error } = await admin
+    .from('calendar_events')
+    .select('title, start_date, category')
+    .gte('start_date', today.toISOString().slice(0, 10))
+    .lte('start_date', futureLimit.toISOString().slice(0, 10))
+    .order('start_date', { ascending: true })
+
+  if (error || !events) return []
+
+  return events
+    .map((e: any) => {
+      const cat  = mapCategory(e.category ?? 'general')
+      const dday = calcDday(e.start_date, today)
+      return { title: e.title, deadline: e.start_date, category: cat, dday }
+    })
+    .filter(e => alertDays.includes(e.dday))
+}
 
 // ── 카테고리 한글명 / 색상 ────────────────────────────────
 const CAT_META: Record<ScheduleCategory, { label: string; color: string; emoji: string }> = {
@@ -227,22 +245,19 @@ async function sendReminderEmail(
 }
 
 // ── GET /api/reminder/send — 수동 트리거 / Cron 진입점 ──
-// ?secret=xxx 로 간단 인증 (Cron은 헤더로 처리)
 reminder.get('/send', async (c) => {
   const today = new Date()
+  const admin = getSupabaseAdmin(c.env)
 
-  // 오늘 기준 D-7, D-3, D-1, D-0 에 해당하는 일정 추출
+  // 캘린더 DB에서 D-7, D-3, D-1, D-0 해당 일정 조회
   const ALERT_DAYS = [7, 3, 1, 0]
-  const todayItems = TAX_SCHEDULES
-    .map(s => ({ ...s, dday: calcDday(s.deadline, today) }))
-    .filter(s => ALERT_DAYS.includes(s.dday))
+  const todayItems = await fetchTodaySchedules(admin, today, ALERT_DAYS)
 
   if (todayItems.length === 0) {
     return c.json({ ok: true, message: '오늘 발송할 리마인더 없음', date: today.toISOString().slice(0, 10) })
   }
 
   // Supabase에서 전체 유저 이메일 조회 (service_role)
-  const admin = getSupabaseAdmin(c.env)
   const { data: users, error: userErr } = await admin
     .from('user_profiles')
     .select('id, email_reminder')
@@ -285,12 +300,34 @@ reminder.get('/send', async (c) => {
 // ── GET /api/reminder/preview — 이메일 미리보기 (개발용) ──
 reminder.get('/preview', async (c) => {
   const today = new Date()
-  // 미리보기용: 실제 D-day 무관하게 첫 3개 항목으로 샘플 생성
-  const sampleItems = TAX_SCHEDULES.slice(0, 3).map(s => ({
-    ...s,
-    dday: calcDday(s.deadline, today),
+  const admin = getSupabaseAdmin(c.env)
+
+  // DB에서 가장 가까운 일정 3개로 미리보기
+  const futureLimit = new Date(today)
+  futureLimit.setDate(futureLimit.getDate() + 90)
+  const { data: events } = await admin
+    .from('calendar_events')
+    .select('title, start_date, category')
+    .gte('start_date', today.toISOString().slice(0, 10))
+    .lte('start_date', futureLimit.toISOString().slice(0, 10))
+    .order('start_date', { ascending: true })
+    .limit(3)
+
+  const sampleItems = (events ?? []).map((e: any) => ({
+    title:    e.title,
+    deadline: e.start_date,
+    category: mapCategory(e.category ?? 'general'),
+    dday:     calcDday(e.start_date, today),
   }))
-  const html = buildEmailHtml('솔', sampleItems)
+
+  // DB 일정 없으면 샘플 데이터로 폴백
+  const previewItems = sampleItems.length > 0 ? sampleItems : [
+    { title: '원천세 신고·납부',    deadline: '2026-04-10', category: 'finance' as ScheduleCategory, dday: 7 },
+    { title: '4대보험 EDI 정산',    deadline: '2026-04-07', category: 'labor'   as ScheduleCategory, dday: 3 },
+    { title: '비품 구매 예산 신청', deadline: '2026-04-15', category: 'general' as ScheduleCategory, dday: 1 },
+  ]
+
+  const html = buildEmailHtml('솔', previewItems)
   return c.html(html)
 })
 

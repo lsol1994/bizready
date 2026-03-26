@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
-import { getSupabaseClientWithToken } from '../lib/supabase'
+import { getSupabaseClientWithToken, getSupabaseAdmin } from '../lib/supabase'
 import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
@@ -60,23 +60,13 @@ const CATEGORY_STYLE: Record<ScheduleCategory, {
   },
 }
 
-// 업무 일정 (카테고리별 색상 분류)
-const TAX_SCHEDULES: { title: string; deadline: string; category: ScheduleCategory }[] = [
-  // ── 재무/회계/세금/급여 (빨강) ──
-  { title: '원천세 신고·납부',          deadline: '2026-04-10', category: 'finance' },
-  { title: '부가세 1기 예정신고·납부',  deadline: '2026-04-25', category: 'finance' },
-  { title: '급여 지급',                  deadline: '2026-04-25', category: 'finance' },
-  { title: '법인세 신고·납부',           deadline: '2026-05-31', category: 'finance' },
-  { title: '종합소득세 확정신고',        deadline: '2026-05-31', category: 'finance' },
-  // ── 노무/4대보험/고용 (노랑) ──
-  { title: '4대보험 EDI 정산',           deadline: '2026-04-07', category: 'labor'   },
-  { title: '고용보험 지원금 신청',       deadline: '2026-04-30', category: 'labor'   },
-  { title: '4대보험 보수총액 신고',      deadline: '2026-05-15', category: 'labor'   },
-  // ── 총무/행정/이벤트 (파랑) ──
-  { title: '비품 구매 예산 신청',        deadline: '2026-04-15', category: 'general' },
-  { title: '차량 정기 점검',             deadline: '2026-05-10', category: 'general' },
-  { title: '사무용품 재고 점검',         deadline: '2026-04-20', category: 'general' },
-]
+// 캘린더 category → ScheduleCategory 매핑
+// calendar_events.category: 'tax'|'labor'|'company'|'personal' → finance/labor/general
+function mapCategory(cat: string): ScheduleCategory {
+  if (cat === 'labor')                          return 'labor'
+  if (cat === 'tax' || cat === 'finance')       return 'finance'
+  return 'general'  // company, personal, general 등
+}
 
 // 카테고리 데이터
 const categories = [
@@ -133,12 +123,35 @@ dashboard.get('/', async (c) => {
   const initial  = userName.charAt(0).toUpperCase()
   const upgraded = c.req.query('upgraded') === '1'
 
-  // D-day 계산 (카테고리별 색상)
-  const ddayItems = TAX_SCHEDULES
-    .map(s => ({ ...s, ...calcDday(s.deadline, s.category) }))
-    .filter(s => s.dday >= 0)          // 지난 일정 제외
-    .sort((a, b) => a.dday - b.dday)   // 임박 순 정렬
-    .slice(0, 4)                        // 최대 4개
+  // D-day 계산 — 캘린더 DB에서 조회
+  let ddayItems: any[] = []
+  try {
+    const adminDb = getSupabaseAdmin(c.env)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    // 오늘 이후 90일 범위 일정 조회
+    const futureLimit = new Date(today)
+    futureLimit.setDate(futureLimit.getDate() + 90)
+    const { data: events } = await adminDb
+      .from('calendar_events')
+      .select('id, title, start_date, category')
+      .gte('start_date', today.toISOString().slice(0, 10))
+      .lte('start_date', futureLimit.toISOString().slice(0, 10))
+      .order('start_date', { ascending: true })
+
+    if (events && events.length > 0) {
+      ddayItems = events
+        .map((e: any) => {
+          const cat = mapCategory(e.category ?? 'general')
+          return { title: e.title, deadline: e.start_date, category: cat, ...calcDday(e.start_date, cat) }
+        })
+        .filter((s: any) => s.dday >= 0)
+        .sort((a: any, b: any) => a.dday - b.dday)
+        .slice(0, 4)
+    }
+  } catch {
+    ddayItems = []
+  }
 
   // 공지 고유 ID — 공지 내용 바꿀 때 이 값만 바꾸면 전체 재표시
   const NOTICE_ID = 'notice_2026_q1_vat'
