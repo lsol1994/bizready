@@ -286,8 +286,10 @@ searchRoute.get('/', async (c) => {
                     const summaryHtml = highlight(summaryText, q)
                     const tags: string[] = Array.isArray(g.tags) ? g.tags : []
                     return (
-                      <a href={`/dashboard/guide/${g.id}`}
-                         class="bg-white rounded-xl border border-gray-100 p-4 md:p-5 result-card flex items-start gap-4 block hover:border-blue-200 transition-all">
+                      <div
+                        onclick={`window.location.href='/dashboard/guide/${g.id}'`}
+                        class="bg-white rounded-xl border border-gray-100 p-4 md:p-5 result-card flex items-start gap-3 cursor-pointer hover:border-blue-200 transition-all"
+                      >
                         {/* 카테고리 도트 */}
                         <div class={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${catStyle.dot}`}></div>
                         <div class="flex-1 min-w-0">
@@ -315,23 +317,22 @@ searchRoute.get('/', async (c) => {
                               dangerouslySetInnerHTML={{ __html: summaryHtml }}
                             />
                           )}
-                          {/* 태그 */}
+                          {/* 태그 — onclick으로 이동 (중첩 <a> 방지) */}
                           {tags.length > 0 && (
                             <div class="flex flex-wrap gap-1.5">
                               {tags.slice(0, 4).map((t: string) => (
-                                <a
-                                  href={`/dashboard/search?q=${encodeURIComponent(t)}&cat=${cat}`}
-                                  class="text-xs bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100 hover:border-blue-300 hover:text-blue-500 transition-colors"
-                                  onclick="event.stopPropagation()"
+                                <span
+                                  onclick={`event.stopPropagation(); window.location.href='/dashboard/search?q=${encodeURIComponent(t)}&cat=${cat}'`}
+                                  class="text-xs bg-gray-50 text-gray-400 px-2 py-0.5 rounded border border-gray-100 hover:border-blue-300 hover:text-blue-500 transition-colors cursor-pointer"
                                 >
                                   #{t}
-                                </a>
+                                </span>
                               ))}
                             </div>
                           )}
                         </div>
                         <i class="fas fa-chevron-right text-gray-200 text-sm mt-1 flex-shrink-0"></i>
-                      </a>
+                      </div>
                     )
                   })}
                 </div>
