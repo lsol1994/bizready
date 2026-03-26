@@ -119,12 +119,10 @@ calendarRoute.get('/', async (c) => {
             <p class="text-gray-500 text-xs mt-0.5 hidden sm:block">세무·노무 법정 기한 + 사내 일정 통합 캘린더</p>
             </div>
           </div>
-          {isAdmin && (
-            <button onclick="openAddEventModal()"
-              class="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-              <i class="fas fa-plus"></i>일정 추가
-            </button>
-          )}
+          <button onclick="openAddEventModal()"
+            class="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+            <i class="fas fa-plus"></i>일정 추가
+          </button>
         </header>
 
         <div class="px-6 py-5 max-w-6xl mx-auto">
@@ -260,6 +258,8 @@ calendarRoute.get('/', async (c) => {
       <script dangerouslySetInnerHTML={{ __html: `
 // ── DB 기반 이벤트만 사용 (법정기한도 DB에서 관리)
 const IS_ADMIN = ${isAdmin};
+// 세무(finance)/노무(labor) 분류는 관리자만 추가·수정·삭제 가능
+const ADMIN_ONLY_CATS = ['finance', 'labor'];
 
 // 카테고리별 색상 (재무/회계=빨강, 노무=노랑, 총무/행정=파랑)
 const CAT_COLORS = {
@@ -281,7 +281,7 @@ let customEvents = [];
 
 async function loadCustomEvents() {
   try {
-    const res = await fetch('/api/calendar/events');
+    const res = await fetch('/dashboard/calendar/api/events');
     const data = await res.json();
     if (data.ok) customEvents = data.events || [];
   } catch(e) { console.warn('커스텀 이벤트 로드 실패', e); }
@@ -382,6 +382,7 @@ function showEventDetail(event) {
   const d        = new Date(event.start);
   const today    = new Date();
   const diffDays = Math.ceil((d - today) / (1000*60*60*24));
+  const cat      = event.extendedProps.category || '';
   const catLabel = {
     finance:'재무·회계·세금',
     labor:'노무·4대보험',
@@ -392,6 +393,19 @@ function showEventDetail(event) {
     tax:'세무·신고', // 하위호환
   };
 
+  // 법정 경고문 (세무/노무 카테고리)
+  const legalWarning = (cat === 'finance' || cat === 'labor' || cat === 'tax')
+    ? '<div class="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">'
+      + '<div class="flex items-start gap-2">'
+      + '<i class="fas fa-exclamation-triangle text-amber-500 mt-0.5 flex-shrink-0"></i>'
+      + '<div class="text-xs text-amber-800 leading-relaxed">'
+      + '<strong class="font-bold">법정 기한 주의</strong><br>'
+      + (cat === 'finance' ? '세금 신고·납부 기한을 놓치면 가산세(무신고 20%, 납부 0.022%/일)가 부과됩니다.' : '')
+      + (cat === 'labor' ? '4대보험 및 노무 기한을 초과하면 과태료(최대 500만 원) 및 연체금이 부과됩니다.' : '')
+      + (cat === 'tax' ? '세금 신고·납부 기한을 놓치면 가산세가 부과됩니다.' : '')
+      + '</div></div></div>'
+    : '';
+
   document.getElementById('ev-detail-body').innerHTML =
     '<div class="space-y-3 text-sm">'
     + '<div class="flex items-center gap-2"><i class="fas fa-calendar text-blue-500 w-4"></i><span>'
@@ -401,18 +415,21 @@ function showEventDetail(event) {
       ? '<div class="flex items-center gap-2"><i class="fas fa-hourglass-half text-amber-500 w-4"></i><span class="font-medium">'
         + (diffDays === 0 ? '오늘!' : 'D-' + diffDays) + '</span></div>'
       : '')
-    + (event.extendedProps.category
+    + (cat
       ? '<div class="flex items-center gap-2"><i class="fas fa-tag text-gray-400 w-4"></i><span class="text-gray-600">'
-        + (catLabel[event.extendedProps.category] || event.extendedProps.category) + '</span></div>'
+        + (catLabel[cat] || cat) + '</span></div>'
       : '')
     + (event.extendedProps.note
       ? '<div class="bg-gray-50 rounded-lg p-3 text-gray-700 leading-relaxed">' + event.extendedProps.note + '</div>'
       : '')
+    + legalWarning
     + '</div>';
 
-  // 관리자이면 수정/삭제 버튼 항상 표시 (법정기한 포함)
+  // RBAC: admin은 모든 일정 수정/삭제 가능
+  // 일반 사용자는 general/company/team/exec 카테고리만 수정/삭제 가능
   const adminActions = document.getElementById('ev-detail-admin-actions');
-  if (IS_ADMIN && _currentEventDbId) {
+  const canEdit = _currentEventDbId && (IS_ADMIN || !ADMIN_ONLY_CATS.includes(cat));
+  if (canEdit) {
     adminActions.classList.remove('hidden');
     document.getElementById('ev-edit-btn').onclick = function() {
       closeEventDetail();
@@ -438,7 +455,19 @@ function openAddEventModal() {
   document.getElementById('ev-title').value    = '';
   document.getElementById('ev-start').value    = new Date().toISOString().split('T')[0];
   document.getElementById('ev-end').value      = '';
-  document.getElementById('ev-category').value = 'company';
+  // 비관리자는 기본 분류를 general로 (finance/labor는 제한)
+  document.getElementById('ev-category').value = IS_ADMIN ? 'company' : 'general';
+  // 비관리자는 finance/labor 옵션 비활성화
+  Array.from(document.querySelectorAll('#ev-category option')).forEach(function(opt) {
+    const val = opt.value;
+    if (!IS_ADMIN && ADMIN_ONLY_CATS.includes(val)) {
+      opt.disabled = true;
+      opt.style.color = '#9ca3af';
+    } else {
+      opt.disabled = false;
+      opt.style.color = '';
+    }
+  });
   document.getElementById('ev-note').value     = '';
   document.getElementById('ev-error').classList.add('hidden');
   const btn = document.getElementById('save-ev-btn');
@@ -487,13 +516,13 @@ async function saveEvent() {
 
   let res;
   if (editId) {
-    res = await fetch('/api/calendar/events/' + editId, {
+    res = await fetch('/dashboard/calendar/api/events/' + editId, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
   } else {
-    res = await fetch('/api/calendar/events', {
+    res = await fetch('/dashboard/calendar/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -542,7 +571,7 @@ async function saveEvent() {
 async function deleteCustomEvent(dbId, title, fcId) {
   if (!confirm('"' + title + '" 일정을 삭제하시겠습니까?')) return;
   closeEventDetail();
-  const res  = await fetch('/api/calendar/events/' + dbId, { method: 'DELETE' });
+  const res  = await fetch('/dashboard/calendar/api/events/' + dbId, { method: 'DELETE' });
   const data = await res.json();
   if (data.ok) {
     const ev = calendar.getEventById(String(fcId));
@@ -562,7 +591,7 @@ document.addEventListener('DOMContentLoaded', initCalendar);
 })
 
 // ── 캘린더 이벤트 API ──────────────────────────────────
-// GET /api/calendar/events
+// GET /dashboard/calendar/api/events
 calendarRoute.get('/api/events', async (c) => {
   const db = getSupabaseAdmin(c.env)
   const { data, error } = await db.from('calendar_events')
@@ -572,11 +601,13 @@ calendarRoute.get('/api/events', async (c) => {
   return c.json({ ok: true, events: data ?? [] })
 })
 
-// POST /api/calendar/events
+// POST /dashboard/calendar/api/events
 calendarRoute.post('/api/events', async (c) => {
   const cookie     = c.req.header('Cookie') ?? ''
   const sessionStr = parseSessionCookie(cookie)
   if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const ADMIN_ONLY_CATEGORIES = ['finance', 'labor', 'tax']
 
   try {
     let sessionObj: any
@@ -585,13 +616,18 @@ calendarRoute.post('/api/events', async (c) => {
 
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email !== 'lsol3264@gmail.com') {
-      return c.json({ ok: false, error: '관리자만 일정을 추가할 수 있습니다.' }, 403)
-    }
+    if (!user) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+    const isAdmin = user.email === 'lsol3264@gmail.com'
 
     const body = await c.req.json<any>()
     if (!body.title?.trim() || !body.start_date) {
       return c.json({ ok: false, error: '제목과 시작일은 필수입니다.' }, 400)
+    }
+
+    // 세무/노무 카테고리는 관리자만 추가 가능
+    if (ADMIN_ONLY_CATEGORIES.includes(body.category ?? '') && !isAdmin) {
+      return c.json({ ok: false, error: '세무·노무 카테고리는 관리자만 추가할 수 있습니다.' }, 403)
     }
 
     const db = getSupabaseAdmin(c.env)
@@ -611,11 +647,13 @@ calendarRoute.post('/api/events', async (c) => {
   }
 })
 
-// PUT /api/calendar/events/:id  (수정)
+// PUT /dashboard/calendar/api/events/:id  (수정)
 calendarRoute.put('/api/events/:id', async (c) => {
   const cookie     = c.req.header('Cookie') ?? ''
   const sessionStr = parseSessionCookie(cookie)
   if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const ADMIN_ONLY_CATEGORIES = ['finance', 'labor', 'tax']
 
   try {
     let sessionObj: any
@@ -624,17 +662,28 @@ calendarRoute.put('/api/events/:id', async (c) => {
 
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email !== 'lsol3264@gmail.com') {
-      return c.json({ ok: false, error: '관리자만 수정할 수 있습니다.' }, 403)
+    if (!user) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+    const isAdmin = user.email === 'lsol3264@gmail.com'
+    const id   = c.req.param('id')
+    const db   = getSupabaseAdmin(c.env)
+
+    // 기존 이벤트의 카테고리 확인
+    const { data: existing } = await db.from('calendar_events').select('category, created_by').eq('id', id).single()
+    if (existing && ADMIN_ONLY_CATEGORIES.includes(existing.category ?? '') && !isAdmin) {
+      return c.json({ ok: false, error: '세무·노무 일정은 관리자만 수정할 수 있습니다.' }, 403)
     }
 
-    const id   = c.req.param('id')
     const body = await c.req.json<any>()
     if (!body.title?.trim() || !body.start_date) {
       return c.json({ ok: false, error: '제목과 시작일은 필수입니다.' }, 400)
     }
 
-    const db = getSupabaseAdmin(c.env)
+    // 변경하려는 카테고리도 admin_only면 admin만 허용
+    if (ADMIN_ONLY_CATEGORIES.includes(body.category ?? '') && !isAdmin) {
+      return c.json({ ok: false, error: '세무·노무 카테고리는 관리자만 설정할 수 있습니다.' }, 403)
+    }
+
     const { error } = await db.from('calendar_events').update({
       title:      body.title.trim(),
       start_date: body.start_date,
@@ -650,11 +699,13 @@ calendarRoute.put('/api/events/:id', async (c) => {
   }
 })
 
-// DELETE /api/calendar/events/:id
+// DELETE /dashboard/calendar/api/events/:id
 calendarRoute.delete('/api/events/:id', async (c) => {
   const cookie     = c.req.header('Cookie') ?? ''
   const sessionStr = parseSessionCookie(cookie)
   if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const ADMIN_ONLY_CATEGORIES = ['finance', 'labor', 'tax']
 
   try {
     let sessionObj: any
@@ -663,12 +714,18 @@ calendarRoute.delete('/api/events/:id', async (c) => {
 
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email !== 'lsol3264@gmail.com') {
-      return c.json({ ok: false, error: '관리자만 삭제할 수 있습니다.' }, 403)
-    }
+    if (!user) return c.json({ ok: false, error: 'unauthorized' }, 401)
 
+    const isAdmin = user.email === 'lsol3264@gmail.com'
     const id = c.req.param('id')
     const db = getSupabaseAdmin(c.env)
+
+    // 이벤트 카테고리 확인: finance/labor이면 admin만 삭제 가능
+    const { data: existing } = await db.from('calendar_events').select('category, created_by').eq('id', id).single()
+    if (existing && ADMIN_ONLY_CATEGORIES.includes(existing.category ?? '') && !isAdmin) {
+      return c.json({ ok: false, error: '세무·노무 일정은 관리자만 삭제할 수 있습니다.' }, 403)
+    }
+
     const { error } = await db.from('calendar_events').delete().eq('id', id)
     if (error) return c.json({ ok: false, error: error.message }, 500)
     return c.json({ ok: true })

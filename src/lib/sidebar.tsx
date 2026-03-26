@@ -170,6 +170,11 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
           <p class="sidebar-section-label px-2 text-xs font-semibold uppercase tracking-widest">설정</p>
         </div>
 
+        <a href="/dashboard/settings" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/settings'))}>
+          <i class="fas fa-bell w-4 text-center text-sm"></i>
+          <span>알림 설정</span>
+        </a>
+
         <a href="/dashboard/payment" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/payment'))}>
           <i class={`fas ${isPaid ? 'fa-gem' : 'fa-crown'} w-4 text-center text-sm`}></i>
           <span>{isPaid ? '구독 관리' : '프리미엄'}</span>

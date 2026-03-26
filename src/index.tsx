@@ -15,6 +15,7 @@ import fileApi           from './routes/file-api'
 import calendarRoute     from './routes/calendar'
 import memoRoute         from './routes/memo'
 import reminderRoute     from './routes/reminder'
+import settingsRoute     from './routes/settings'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -78,10 +79,13 @@ app.route('/dashboard/checklist', checklistRoute)
 app.route('/dashboard/payment',   paymentRoute)
 app.route('/dashboard/calendar',  calendarRoute)
 app.route('/dashboard/memo',      memoRoute)
+app.route('/dashboard/settings',  settingsRoute)
 app.route('/dashboard',           dashboardRoute)
 
 // ── 리마인더 API (인증 불필요 — Cron Trigger 진입점) ────
 app.route('/api/reminder',        reminderRoute)
+
+
 
 // ── 대시보드 목업 미리보기 (임시) ────────────────
 app.get('/mockup/dashboard', async (c) => {
