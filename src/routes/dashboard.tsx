@@ -8,12 +8,46 @@ import type { Env } from '../lib/supabase'
 const dashboard = new Hono<{ Bindings: Env }>()
 dashboard.use(renderer)
 
-// 세무신고 일정 (매년 고정 일정 — 날짜만 업데이트)
-const TAX_SCHEDULES = [
-  { title: '원천세 신고·납부',  deadline: '2026-03-31' },
-  { title: '4대보험 EDI 정산',  deadline: '2026-04-07' },
-  { title: '부가세 확정신고',   deadline: '2026-04-25' },
-  { title: '법인세 신고·납부',  deadline: '2026-05-31' },
+// 업무 카테고리 타입
+// finance  → 재무/회계/세금/급여 → 빨강
+// labor    → 노무/4대보험/고용 → 노랑
+// general  → 총무/비품/이벤트/행정 → 파랑
+type ScheduleCategory = 'finance' | 'labor' | 'general'
+
+const CATEGORY_STYLE: Record<ScheduleCategory, { cardCls: string; badgeCls: string; iconCls: string }> = {
+  finance: {
+    cardCls: 'dday-card dday-red',
+    badgeCls: 'text-red-600 bg-red-100',
+    iconCls:  'fa-file-invoice-dollar',
+  },
+  labor: {
+    cardCls: 'dday-card dday-yellow',
+    badgeCls: 'text-yellow-700 bg-yellow-100',
+    iconCls:  'fa-users',
+  },
+  general: {
+    cardCls: 'dday-card dday-blue',
+    badgeCls: 'text-blue-600 bg-blue-100',
+    iconCls:  'fa-building',
+  },
+}
+
+// 업무 일정 (카테고리별 색상 분류)
+const TAX_SCHEDULES: { title: string; deadline: string; category: ScheduleCategory }[] = [
+  // ── 재무/회계/세금/급여 (빨강) ──
+  { title: '원천세 신고·납부',          deadline: '2026-04-10', category: 'finance' },
+  { title: '부가세 1기 예정신고·납부',  deadline: '2026-04-25', category: 'finance' },
+  { title: '급여 지급',                  deadline: '2026-04-25', category: 'finance' },
+  { title: '법인세 신고·납부',           deadline: '2026-05-31', category: 'finance' },
+  { title: '종합소득세 확정신고',        deadline: '2026-05-31', category: 'finance' },
+  // ── 노무/4대보험/고용 (노랑) ──
+  { title: '4대보험 EDI 정산',           deadline: '2026-04-07', category: 'labor'   },
+  { title: '고용보험 지원금 신청',       deadline: '2026-04-30', category: 'labor'   },
+  { title: '4대보험 보수총액 신고',      deadline: '2026-05-15', category: 'labor'   },
+  // ── 총무/행정/이벤트 (파랑) ──
+  { title: '비품 구매 예산 신청',        deadline: '2026-04-15', category: 'general' },
+  { title: '차량 정기 점검',             deadline: '2026-05-10', category: 'general' },
+  { title: '사무용품 재고 점검',         deadline: '2026-04-20', category: 'general' },
 ]
 
 // 카테고리 데이터
@@ -34,16 +68,15 @@ const recentGuides = [
   { category: '급여관리',  title: '퇴직금 계산 방법과 지급 기준',  badge: '',    badgeColor: ''                           },
 ]
 
-// D-day 계산 및 색상 결정 (서버 사이드)
-function calcDday(deadlineStr: string): { dday: number; colorCls: string; iconCls: string; badgeCls: string } {
+// D-day 계산 — 색상은 카테고리 기반
+function calcDday(deadlineStr: string, category: ScheduleCategory): {
+  dday: number; colorCls: string; iconCls: string; badgeCls: string
+} {
   const now      = new Date()
   const deadline = new Date(deadlineStr)
   const dday     = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-  if (dday <= 7)  return { dday, colorCls: 'dday-card dday-red',    iconCls: 'fa-fire',              badgeCls: 'text-red-600 bg-red-100'    }
-  if (dday <= 30) return { dday, colorCls: 'dday-card dday-orange', iconCls: 'fa-exclamation-triangle', badgeCls: 'text-orange-600 bg-orange-100' }
-  if (dday <= 60) return { dday, colorCls: 'dday-card dday-yellow', iconCls: 'fa-file-invoice',      badgeCls: 'text-yellow-700 bg-yellow-100' }
-  return               { dday, colorCls: 'dday-card dday-blue',   iconCls: 'fa-building',          badgeCls: 'text-blue-600 bg-blue-100'  }
+  const style    = CATEGORY_STYLE[category]
+  return { dday, ...style }
 }
 
 dashboard.get('/', async (c) => {
@@ -74,9 +107,9 @@ dashboard.get('/', async (c) => {
   const initial  = userName.charAt(0).toUpperCase()
   const upgraded = c.req.query('upgraded') === '1'
 
-  // D-day 계산
+  // D-day 계산 (카테고리별 색상)
   const ddayItems = TAX_SCHEDULES
-    .map(s => ({ ...s, ...calcDday(s.deadline) }))
+    .map(s => ({ ...s, ...calcDday(s.deadline, s.category) }))
     .filter(s => s.dday >= 0)          // 지난 일정 제외
     .sort((a, b) => a.dday - b.dday)   // 임박 순 정렬
     .slice(0, 4)                        // 최대 4개
@@ -266,10 +299,10 @@ dashboard.get('/', async (c) => {
         /* D-day 카드 */
         .dday-card              { transition: all 0.15s; display:block; }
         .dday-card:hover        { box-shadow: 0 4px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
-        .dday-red    { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left:4px solid #ef4444; }
-        .dday-orange { background: linear-gradient(135deg,#ffedd5,#fed7aa); border-left:4px solid #f97316; }
-        .dday-yellow { background: linear-gradient(135deg,#fef9c3,#fef08a); border-left:4px solid #eab308; }
-        .dday-blue   { background: linear-gradient(135deg,#dbeafe,#bfdbfe); border-left:4px solid #3b82f6; }
+        /* 카테고리별 색상: finance=빨강 / labor=노랑 / general=파랑 */
+        .dday-red    { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left:4px solid #ef4444; color: #991b1b; }
+        .dday-yellow { background: linear-gradient(135deg,#fef9c3,#fef08a); border-left:4px solid #ca8a04; color: #713f12; }
+        .dday-blue   { background: linear-gradient(135deg,#dbeafe,#bfdbfe); border-left:4px solid #3b82f6; color: #1e3a8a; }
       `}</style>
 
       {/* 공지 1회 표시 JS */}

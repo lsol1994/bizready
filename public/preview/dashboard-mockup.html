@@ -12,8 +12,8 @@
     .card-hover { transition: all 0.18s; cursor: pointer; }
     .card-hover:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.10); transform: translateY(-2px); }
     .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #0f2544 100%); }
+    /* 카테고리 색상: 재무/회계=빨강 / 노무=노랑 / 총무=파랑 */
     .dday-red    { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left:4px solid #ef4444; }
-    .dday-orange { background: linear-gradient(135deg,#ffedd5,#fed7aa); border-left:4px solid #f97316; }
     .dday-yellow { background: linear-gradient(135deg,#fef9c3,#fef08a); border-left:4px solid #eab308; }
     .dday-blue   { background: linear-gradient(135deg,#dbeafe,#bfdbfe); border-left:4px solid #3b82f6; }
     .notice-bar  { background: linear-gradient(90deg,#fef3c7,#fde68a); }
@@ -147,39 +147,49 @@
         </div>
       </div>
 
-      <!-- 세무신고 D-day 위젯 -->
+      <!-- 업무일정 D-day 위젯 (카테고리별 색상) -->
+      <!-- 범례 -->
+      <div class="flex items-center gap-4 text-xs text-gray-500 mb-1 flex-wrap">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400 inline-block"></span> 재무·회계·세금·급여</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span> 노무·4대보험·고용지원</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block"></span> 총무·행정·이벤트</span>
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <!-- 재무(빨강) -->
         <div class="dday-red rounded-xl p-4 card-hover">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">D-5</span>
-            <i class="fas fa-fire text-red-400 text-sm"></i>
+            <i class="fas fa-file-invoice-dollar text-red-400 text-sm"></i>
           </div>
           <div class="font-bold text-gray-800 text-sm leading-snug">원천세 신고·납부</div>
           <div class="text-gray-500 text-xs mt-1">마감 3/31(월)</div>
         </div>
-        <div class="dday-orange rounded-xl p-4 card-hover">
+        <!-- 노무(노랑) -->
+        <div class="dday-yellow rounded-xl p-4 card-hover">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">D-12</span>
-            <i class="fas fa-exclamation-triangle text-orange-400 text-sm"></i>
+            <span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">D-12</span>
+            <i class="fas fa-users text-yellow-500 text-sm"></i>
           </div>
           <div class="font-bold text-gray-800 text-sm leading-snug">4대보험 EDI 정산</div>
           <div class="text-gray-500 text-xs mt-1">마감 4/7(월)</div>
         </div>
-        <div class="dday-yellow rounded-xl p-4 card-hover">
+        <!-- 총무(파랑) -->
+        <div class="dday-blue rounded-xl p-4 card-hover">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">D-30</span>
-            <i class="fas fa-file-invoice text-yellow-500 text-sm"></i>
+            <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">D-20</span>
+            <i class="fas fa-building text-blue-400 text-sm"></i>
+          </div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">비품 구매 예산 신청</div>
+          <div class="text-gray-500 text-xs mt-1">마감 4/15(수)</div>
+        </div>
+        <!-- 재무(빨강) -->
+        <div class="dday-red rounded-xl p-4 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">D-30</span>
+            <i class="fas fa-file-invoice-dollar text-red-400 text-sm"></i>
           </div>
           <div class="font-bold text-gray-800 text-sm leading-snug">부가세 확정신고</div>
           <div class="text-gray-500 text-xs mt-1">마감 4/25(금)</div>
-        </div>
-        <div class="dday-blue rounded-xl p-4 card-hover">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">D-56</span>
-            <i class="fas fa-building text-blue-400 text-sm"></i>
-          </div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">법인세 신고·납부</div>
-          <div class="text-gray-500 text-xs mt-1">마감 5/31(일)</div>
         </div>
       </div>
 

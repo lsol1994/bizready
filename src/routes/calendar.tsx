@@ -8,40 +8,65 @@ import type { Env } from '../lib/supabase'
 const calendarRoute = new Hono<{ Bindings: Env }>()
 calendarRoute.use(renderer)
 
-// ── 국세청 2026 세무·법정 일정 (확충 버전) ───────────────
+// ── 카테고리 색상 정의 (재무/회계=빨강, 노무=노랑, 총무=파랑) ──────────
+// finance : 세금·세무·급여 → 빨강 계열
+// labor   : 4대보험·노무·연말정산 → 노랑 계열
+// general : 비품·행정·이벤트 → 파랑 계열
+// company : 사내 행사 → 파랑 (general과 동일 계열)
+// team    : 팀 이벤트 → 초록
+// exec    : 임원 일정 → 주황
+const CATEGORY_COLOR: Record<string, string> = {
+  finance: '#ef4444',  // 빨강 - 재무/회계/세금/급여
+  labor:   '#ca8a04',  // 노랑(진) - 노무/4대보험/고용
+  general: '#3b82f6',  // 파랑 - 총무/행정/비품/이벤트
+  company: '#3b82f6',  // 파랑 - 사내 행사
+  team:    '#22c55e',  // 초록 - 팀 이벤트
+  exec:    '#f59e0b',  // 주황 - 임원 일정
+}
+
+// ── 국세청 2026 세무·법정 일정 (카테고리별 색상 적용) ────────────────────
 const LEGAL_EVENTS = [
   // ─ 1월 ─
-  { title: '원천세 반기납부 (7~12월)', month: 1, day: 10, color: '#f97316', category: 'tax', note: '7~12월 원천세 반기납부 (소규모 사업장)' },
-  { title: '지급명세서 제출 (근로·사업소득)', month: 1, day: 31, color: '#ef4444', category: 'tax', note: '근로소득·사업소득 지급명세서 홈택스 제출' },
-  { title: '부가세 2기 확정 신고·납부', month: 1, day: 25, color: '#ef4444', category: 'tax', note: '2025년 7~12월분 부가가치세 신고·납부 (일반과세자)' },
-  { title: '부가세 2기 확정 신고 (간이과세자)', month: 1, day: 25, color: '#dc2626', category: 'tax', note: '2025년 1~12월분 간이과세자 부가세 신고' },
+  { title: '원천세 반기납부 (7~12월)',          month: 1, day: 10, category: 'finance', note: '7~12월 원천세 반기납부 (소규모 사업장)' },
+  { title: '지급명세서 제출 (근로·사업소득)',    month: 1, day: 31, category: 'finance', note: '근로소득·사업소득 지급명세서 홈택스 제출' },
+  { title: '부가세 2기 확정 신고·납부',          month: 1, day: 25, category: 'finance', note: '2025년 7~12월분 부가가치세 신고·납부 (일반과세자)' },
+  { title: '부가세 2기 확정 신고 (간이과세자)',  month: 1, day: 25, category: 'finance', note: '2025년 1~12월분 간이과세자 부가세 신고' },
   // ─ 2월 ─
-  { title: '연말정산 환급/추징 급여 반영', month: 2, day: 28, color: '#f97316', category: 'labor', note: '2월 급여에 연말정산 결과 반영, 원천징수영수증 발급' },
-  { title: '4대보험 보수총액 신고', month: 2, day: 28, color: '#8b5cf6', category: 'labor', note: '2025년 건강보험·고용보험 보수총액 신고 (2.28 마감)' },
+  { title: '연말정산 환급/추징 급여 반영',       month: 2, day: 28, category: 'labor',   note: '2월 급여에 연말정산 결과 반영, 원천징수영수증 발급' },
+  { title: '4대보험 보수총액 신고',              month: 2, day: 28, category: 'labor',   note: '2025년 건강보험·고용보험 보수총액 신고 (2.28 마감)' },
   // ─ 3월 ─
-  { title: '법인세 신고·납부', month: 3, day: 31, color: '#ef4444', category: 'tax', note: '12월 결산 법인 2025년도 법인세 신고·납부' },
+  { title: '법인세 신고·납부',                   month: 3, day: 31, category: 'finance', note: '12월 결산 법인 2025년도 법인세 신고·납부' },
   // ─ 4월 ─
-  { title: '부가세 1기 예정 신고·납부', month: 4, day: 25, color: '#ef4444', category: 'tax', note: '2026년 1~3월분 부가가치세 예정 신고 (법인 사업자)' },
+  { title: '부가세 1기 예정 신고·납부',          month: 4, day: 25, category: 'finance', note: '2026년 1~3월분 부가가치세 예정 신고 (법인 사업자)' },
+  { title: '4대보험 EDI 정산',                   month: 4, day: 7,  category: 'labor',   note: '4대보험 EDI 공단 정산 처리' },
+  { title: '비품 구매 예산 신청',                month: 4, day: 15, category: 'general', note: '상반기 비품·소모품 예산 신청 및 승인' },
+  { title: '고용보험 지원금 신청',               month: 4, day: 30, category: 'labor',   note: '고용유지지원금, 청년고용 지원금 등 신청 마감' },
   // ─ 5월 ─
-  { title: '종합소득세 확정 신고·납부', month: 5, day: 31, color: '#ef4444', category: 'tax', note: '2025년 귀속 종합소득세 신고·납부' },
-  { title: '개인지방소득세 신고·납부', month: 5, day: 31, color: '#f97316', category: 'tax', note: '2025년 귀속 개인지방소득세 신고 (위택스)' },
+  { title: '종합소득세 확정 신고·납부',          month: 5, day: 31, category: 'finance', note: '2025년 귀속 종합소득세 신고·납부' },
+  { title: '개인지방소득세 신고·납부',           month: 5, day: 31, category: 'finance', note: '2025년 귀속 개인지방소득세 신고 (위택스)' },
+  { title: '4대보험 보수총액 신고 확정',         month: 5, day: 15, category: 'labor',   note: '건강보험·고용보험 보수총액 최종 확정 신고' },
+  { title: '차량 정기 점검',                     month: 5, day: 10, category: 'general', note: '법인 차량 정기 점검 및 보험 갱신 확인' },
   // ─ 6월 ─
-  { title: '상반기 급여 정산 검토', month: 6, day: 30, color: '#8b5cf6', category: 'labor', note: '4대보험 보수월액 중간 검토, 직원 변동사항 정비' },
+  { title: '상반기 급여 정산 검토',              month: 6, day: 30, category: 'labor',   note: '4대보험 보수월액 중간 검토, 직원 변동사항 정비' },
+  { title: '상반기 비품·소모품 재고 점검',       month: 6, day: 20, category: 'general', note: '사무용품·소모품 상반기 재고 현황 파악 및 발주 준비' },
   // ─ 7월 ─
-  { title: '부가세 1기 확정 신고·납부', month: 7, day: 25, color: '#ef4444', category: 'tax', note: '2026년 1~6월분 부가가치세 확정 신고·납부' },
-  { title: '원천세 반기납부 (1~6월)', month: 7, day: 10, color: '#f97316', category: 'tax', note: '2026년 1~6월 원천세 반기납부 (소규모 사업장)' },
+  { title: '부가세 1기 확정 신고·납부',          month: 7, day: 25, category: 'finance', note: '2026년 1~6월분 부가가치세 확정 신고·납부' },
+  { title: '원천세 반기납부 (1~6월)',            month: 7, day: 10, category: 'finance', note: '2026년 1~6월 원천세 반기납부 (소규모 사업장)' },
   // ─ 8월 ─
-  { title: '재산세 1기 납부', month: 8, day: 31, color: '#ef4444', category: 'tax', note: '건물·주택(1/2) 재산세 납부 기한' },
+  { title: '재산세 1기 납부',                    month: 8, day: 31, category: 'finance', note: '건물·주택(1/2) 재산세 납부 기한' },
   // ─ 9월 ─
-  { title: '4대보험 보수총액 신고 (6월결산법인)', month: 9, day: 30, color: '#8b5cf6', category: 'labor', note: '6월 결산 법인 건강보험 보수총액 신고' },
+  { title: '4대보험 보수총액 신고 (6월결산법인)', month: 9, day: 30, category: 'labor',   note: '6월 결산 법인 건강보험 보수총액 신고' },
   // ─ 10월 ─
-  { title: '부가세 2기 예정 신고·납부', month: 10, day: 25, color: '#ef4444', category: 'tax', note: '2026년 7~9월분 부가가치세 예정 신고 (법인 사업자)' },
+  { title: '부가세 2기 예정 신고·납부',          month: 10, day: 25, category: 'finance', note: '2026년 7~9월분 부가가치세 예정 신고 (법인 사업자)' },
+  { title: '하반기 이벤트·행사 계획 수립',       month: 10, day: 10, category: 'general', note: '연말 행사, 송년회, 워크숍 등 하반기 일정 계획 수립' },
   // ─ 11월 ─
-  { title: '재산세 2기 납부', month: 11, day: 30, color: '#ef4444', category: 'tax', note: '토지·주택(1/2) 재산세 납부 기한' },
-  { title: '종합부동산세 신고·납부', month: 11, day: 30, color: '#ef4444', category: 'tax', note: '2026년 종합부동산세 납부 기한' },
+  { title: '재산세 2기 납부',                    month: 11, day: 30, category: 'finance', note: '토지·주택(1/2) 재산세 납부 기한' },
+  { title: '종합부동산세 신고·납부',             month: 11, day: 30, category: 'finance', note: '2026년 종합부동산세 납부 기한' },
+  { title: '연말 소모품·비품 재고 점검',         month: 11, day: 15, category: 'general', note: '연간 소모품 사용량 결산, 내년도 구매 계획 수립' },
   // ─ 12월 ─
-  { title: '연말정산 간소화 자료 수집 시작', month: 12, day: 1, color: '#8b5cf6', category: 'labor', note: '직원 공제 서류 제출 안내 시작 (1월 15일 간소화 서비스 개시)' },
-  { title: '연간 인건비·세무 점검', month: 12, day: 20, color: '#f97316', category: 'labor', note: '연간 인건비 정리, 비과세 항목 검토, 연말 가산세 방지 점검' },
+  { title: '연말정산 간소화 자료 수집 시작',     month: 12, day: 1,  category: 'labor',   note: '직원 공제 서류 제출 안내 시작 (1월 15일 간소화 서비스 개시)' },
+  { title: '연간 인건비·세무 점검',              month: 12, day: 20, category: 'labor',   note: '연간 인건비 정리, 비과세 항목 검토, 연말 가산세 방지 점검' },
+  { title: '연말 비품·소모품 발주 마감',         month: 12, day: 10, category: 'general', note: '연말 정기 발주 마감 및 재고 최종 확인' },
 ]
 
 // ── 메인 캘린더 GET ────────────────────────────────────
@@ -106,12 +131,11 @@ calendarRoute.get('/', async (c) => {
           {/* 범례 */}
           <div class="flex flex-wrap gap-3 mb-4">
             {[
-              { color: 'bg-red-500', label: '세무·신고 기한', note: '지각 시 가산세' },
-              { color: 'bg-orange-500', label: '원천세·납부', note: '매월 처리' },
-              { color: 'bg-purple-500', label: '인사·노무', note: '처리 기한 있음' },
-              { color: 'bg-blue-500', label: '사내 행사', note: '전사 이벤트' },
-              { color: 'bg-green-500', label: '팀 이벤트', note: '부서별 일정' },
-              { color: 'bg-yellow-500', label: '임원 일정', note: '이사회 등' },
+              { color: 'bg-red-500',    label: '재무·회계·세금', note: '신고 기한 필수' },
+              { color: 'bg-yellow-500', label: '노무·4대보험',    note: '기한 초과 시 과태료' },
+              { color: 'bg-blue-500',   label: '총무·행정·비품',  note: '사내 업무 일정' },
+              { color: 'bg-green-500',  label: '팀 이벤트',       note: '부서별 일정' },
+              { color: 'bg-orange-400', label: '임원 일정',       note: '이사회 등' },
             ].map(l => (
               <div class="flex items-center gap-1.5 bg-white rounded-lg px-3 py-1.5 border border-gray-100 shadow-sm">
                 <div class={`w-3 h-3 rounded-full ${l.color}`}></div>
@@ -170,11 +194,12 @@ calendarRoute.get('/', async (c) => {
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">분류</label>
               <select id="ev-category" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="tax">🔴 세무·신고</option>
-                <option value="labor">🟣 인사·노무</option>
+                <option value="finance">🔴 재무·회계·세금</option>
+                <option value="labor">🟡 노무·4대보험</option>
+                <option value="general">🔵 총무·행정·비품</option>
                 <option value="company">🔵 사내 행사</option>
                 <option value="team">🟢 팀 이벤트</option>
-                <option value="exec">🟡 임원 일정</option>
+                <option value="exec">🟠 임원 일정</option>
               </select>
             </div>
             <div>
@@ -237,12 +262,16 @@ calendarRoute.get('/', async (c) => {
 const LEGAL = ${JSON.stringify(LEGAL_EVENTS)};
 const IS_ADMIN = ${isAdmin};
 
+// 카테고리별 색상 (재무/회계=빨강, 노무=노랑, 총무/행정=파랑)
 const CAT_COLORS = {
+  finance: '#ef4444',  // 빨강 - 재무/회계/세금/급여
+  labor:   '#ca8a04',  // 노랑(진) - 노무/4대보험/고용
+  general: '#3b82f6',  // 파랑 - 총무/행정/비품
+  company: '#3b82f6',  // 파랑 - 사내 행사
+  team:    '#22c55e',  // 초록 - 팀 이벤트
+  exec:    '#f59e0b',  // 주황 - 임원 일정
+  // 하위호환 (기존 데이터 대응)
   tax:     '#ef4444',
-  labor:   '#8b5cf6',
-  company: '#3b82f6',
-  team:    '#22c55e',
-  exec:    '#f59e0b',
 };
 
 function buildLegalEvents() {
@@ -253,11 +282,13 @@ function buildLegalEvents() {
     LEGAL.forEach(e => {
       const m = String(e.month).padStart(2,'0');
       const d = String(e.day).padStart(2,'0');
+      // 카테고리 기반 색상 적용 (하드코딩 color 대신 CAT_COLORS 사용)
+      const evColor = CAT_COLORS[e.category] || '#6b7280';
       events.push({
         id: 'legal_' + y + '_' + e.title,
         title: e.title,
         start: y + '-' + m + '-' + d,
-        color: e.color,
+        color: evColor,
         extendedProps: { note: e.note, category: e.category, isLegal: true }
       });
     });
@@ -371,7 +402,15 @@ function showEventDetail(event) {
   const d        = new Date(event.start);
   const today    = new Date();
   const diffDays = Math.ceil((d - today) / (1000*60*60*24));
-  const catLabel = { tax:'세무·신고', labor:'인사·노무', company:'사내 행사', team:'팀 이벤트', exec:'임원 일정' };
+  const catLabel = {
+    finance:'재무·회계·세금',
+    labor:'노무·4대보험',
+    general:'총무·행정',
+    company:'사내 행사',
+    team:'팀 이벤트',
+    exec:'임원 일정',
+    tax:'세무·신고', // 하위호환
+  };
 
   document.getElementById('ev-detail-body').innerHTML =
     '<div class="space-y-3 text-sm">'
