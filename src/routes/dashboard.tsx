@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const dashboard = new Hono<{ Bindings: Env }>()
@@ -119,12 +119,15 @@ dashboard.get('/', async (c) => {
       {/* ── 메인 콘텐츠 ── */}
       <main class="flex-1 overflow-y-auto bg-gray-50">
         {/* 상단 헤더 */}
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
-          <div>
-            <h1 class="text-xl font-bold text-gray-800">
-              안녕하세요, {userName}님 👋
-            </h1>
-            <p class="text-gray-500 text-sm">오늘도 성장하는 경영지원 전문가가 되어봐요</p>
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div class="flex items-center gap-2">
+            <MobileMenuButton />
+            <div>
+              <h1 class="text-lg md:text-xl font-bold text-gray-800">
+                안녕하세요, {userName}님 👋
+              </h1>
+              <p class="text-gray-500 text-xs md:text-sm hidden sm:block">오늘도 성장하는 경영지원 전문가가 되어봐요</p>
+            </div>
           </div>
           <div class="flex items-center gap-3">
             {/* 검색바 */}
@@ -143,7 +146,7 @@ dashboard.get('/', async (c) => {
           </div>
         </header>
 
-        <div class="px-8 py-6 max-w-6xl">
+        <div class="px-4 md:px-8 py-6 max-w-6xl">
           {/* 업그레이드 완료 토스트 */}
           {upgraded && (
             <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">

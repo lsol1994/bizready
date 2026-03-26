@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const payment = new Hono<{ Bindings: Env }>()
@@ -75,12 +75,15 @@ payment.get('/', async (c) => {
 
       {/* 메인 */}
       <main class="flex-1 overflow-y-auto bg-gray-50">
-        <header class="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-10">
-          <h1 class="text-xl font-bold text-gray-800">프리미엄 구독</h1>
-          <p class="text-gray-500 text-sm">중소기업(SME)을 위한 통합 경영지원 가이드 전체를 이용하세요</p>
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-10 flex items-center gap-2">
+          <MobileMenuButton />
+          <div>
+          <h1 class="text-lg md:text-xl font-bold text-gray-800">프리미엄 구독</h1>
+          <p class="text-gray-500 text-xs md:text-sm hidden sm:block">중소기업(SME)을 위한 통합 경영지원 가이드 전체를 이용하세요</p>
+          </div>
         </header>
 
-        <div class="px-8 py-8 max-w-4xl">
+        <div class="px-4 md:px-8 py-8 max-w-4xl">
 
           {/* 이미 구독 중인 경우 */}
           {isPaid ? (

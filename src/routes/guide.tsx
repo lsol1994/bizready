@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const guide = new Hono<{ Bindings: Env }>()
@@ -173,7 +173,8 @@ guide.get('/:id', async (c) => {
       {/* 메인 */}
       <main class="flex-1 overflow-y-auto bg-gray-50">
         {/* 상단 브레드크럼 */}
-        <header class="bg-white border-b border-gray-200 px-8 py-3 flex items-center gap-3 sticky top-0 z-10">
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-3 flex items-center gap-2 sticky top-0 z-10">
+          <MobileMenuButton />
           <a href="/dashboard/archive" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
             <i class="fas fa-chevron-left"></i> 아카이브
           </a>

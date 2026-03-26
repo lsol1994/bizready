@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const checklistRoute = new Hono<{ Bindings: Env }>()
@@ -83,12 +83,15 @@ checklistRoute.get('/', async (c) => {
       />
 
       <main class="flex-1 overflow-y-auto bg-gray-50">
-        <header class="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-10">
-          <h1 class="text-xl font-bold text-gray-800">입사 첫 달 체크리스트</h1>
-          <p class="text-gray-500 text-sm">완료한 항목을 체크하면 진행상황이 자동 저장됩니다</p>
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-10 flex items-center gap-2">
+          <MobileMenuButton />
+          <div>
+          <h1 class="text-lg md:text-xl font-bold text-gray-800">입사 첫 달 체크리스트</h1>
+          <p class="text-gray-500 text-xs md:text-sm hidden sm:block">완료한 항목을 체크하면 진행상황이 자동 저장됩니다</p>
+          </div>
         </header>
 
-        <div class="px-8 py-6 max-w-3xl">
+        <div class="px-4 md:px-8 py-6 max-w-3xl">
           {/* 진행률 카드 */}
           <div class="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
             <div class="flex items-center justify-between mb-3">

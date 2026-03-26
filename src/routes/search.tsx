@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const searchRoute = new Hono<{ Bindings: Env }>()
@@ -51,8 +51,11 @@ searchRoute.get('/', async (c) => {
       />
 
       <main class="flex-1 overflow-y-auto bg-gray-50">
-        <header class="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-10">
-          <h1 class="text-xl font-bold text-gray-800 mb-3">지식 검색</h1>
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-10">
+          <div class="flex items-center gap-2 mb-3">
+            <MobileMenuButton />
+            <h1 class="text-lg md:text-xl font-bold text-gray-800">지식 검색</h1>
+          </div>
           <form method="GET" action="/dashboard/search" class="flex gap-3">
             <div class="relative flex-1 max-w-xl">
               <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -71,7 +74,7 @@ searchRoute.get('/', async (c) => {
           </form>
         </header>
 
-        <div class="px-8 py-6 max-w-3xl">
+        <div class="px-4 md:px-8 py-6 max-w-3xl">
           {/* 추천 검색어 */}
           {!q && (
             <div class="mb-8">

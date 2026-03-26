@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const archive = new Hono<{ Bindings: Env }>()
@@ -107,9 +107,11 @@ archive.get('/', async (c) => {
       {/* ── 메인 ── */}
       <main class="flex-1 overflow-y-auto bg-gray-50">
         {/* 상단 헤더 */}
-        <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-          <div>
-            <h1 class="text-xl font-bold text-gray-800">
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+          <div class="flex items-center gap-2">
+            <MobileMenuButton />
+            <div>
+            <h1 class="text-lg md:text-xl font-bold text-gray-800">
               {selectedCategory ? (
                 <span>
                   <span class="text-gray-400 font-normal text-base">업무 아카이브 /</span> {selectedCategory}
@@ -117,9 +119,10 @@ archive.get('/', async (c) => {
                 </span>
               ) : '업무 아카이브'}
             </h1>
-            <p class="text-gray-500 text-xs mt-0.5">
+            <p class="text-gray-500 text-xs mt-0.5 hidden sm:block">
               {guides.length}개 가이드 · 중소기업(SME)을 위한 통합 경영지원 가이드
             </p>
+            </div>
           </div>
           <div class="flex items-center gap-2">
             <a href="/dashboard/search" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm transition-colors">

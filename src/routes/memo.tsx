@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from '../renderer'
 import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
-import { Sidebar } from '../lib/sidebar'
+import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
 
 const memoRoute = new Hono<{ Bindings: Env }>()
@@ -60,12 +60,15 @@ memoRoute.get('/', async (c) => {
 
       <main class="flex-1 overflow-y-auto bg-gray-50">
         {/* 헤더 */}
-        <header class="bg-white border-b border-gray-200 px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
-          <div>
-            <h1 class="text-xl font-bold text-gray-800">
+        <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-10 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <MobileMenuButton />
+            <div>
+            <h1 class="text-lg md:text-xl font-bold text-gray-800">
               <i class="fas fa-sticky-note text-yellow-500 mr-2"></i>내 메모
             </h1>
-            <p class="text-gray-500 text-sm">나만의 업무 메모를 자유롭게 기록하세요</p>
+            <p class="text-gray-500 text-xs md:text-sm hidden sm:block">나만의 업무 메모를 자유롭게 기록하세요</p>
+            </div>
           </div>
           <button
             onclick="openMemoModal()"
@@ -75,7 +78,7 @@ memoRoute.get('/', async (c) => {
           </button>
         </header>
 
-        <div class="px-8 py-6 max-w-5xl">
+        <div class="px-4 md:px-8 py-6 max-w-5xl">
           {/* 메모 통계 */}
           <div class="grid grid-cols-3 gap-4 mb-6">
             <div class="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
