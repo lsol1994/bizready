@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>이메일 인증 | BizReady</title>
+</head>
+<body style="margin:0;padding:0;background:#f0f9ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f9ff;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+          <!-- 로고 헤더 -->
+          <tr>
+            <td align="center" style="padding-bottom:24px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#0ea5e9,#2563eb);border-radius:16px;padding:14px 20px;" align="center">
+                    <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">💼 BizReady</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:10px 0 0;font-size:13px;color:#64748b;">경영지원 신규 입사자 올인원 아카이브</p>
+            </td>
+          </tr>
+
+          <!-- 메인 카드 -->
+          <tr>
+            <td style="background:#ffffff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.08);padding:40px 36px;">
+
+              <!-- 아이콘 -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:20px;">
+                    <div style="display:inline-block;background:#f0fdf4;border-radius:50%;width:64px;height:64px;line-height:64px;text-align:center;font-size:28px;">🎉</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 제목 -->
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#1e3a5f;text-align:center;">BizReady에 오신 것을 환영합니다!</h1>
+              <p style="margin:0 0 6px;font-size:15px;color:#2563eb;font-weight:600;text-align:center;">{{ .Email }}</p>
+              <p style="margin:0 0 28px;font-size:14px;color:#64748b;text-align:center;line-height:1.6;">
+                아래 버튼을 클릭해 이메일 인증을 완료하고<br/>업무 가이드 전체를 열람하세요.
+              </p>
+
+              <!-- 서비스 소개 박스 -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td style="background:#eff6ff;border-radius:12px;padding:16px 20px;">
+                    <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e40af;">📋 BizReady에서 할 수 있는 것들</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:13px;color:#334155;line-height:2;">
+                          ✅ &nbsp;세무·회계·노무 업무 가이드 열람<br/>
+                          ✅ &nbsp;업무 체크리스트 관리<br/>
+                          ✅ &nbsp;일정·메모 통합 관리<br/>
+                          ✅ &nbsp;신규 입사자 온보딩 아카이브
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 버튼 -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <a href="{{ .ConfirmationURL }}"
+                      style="display:inline-block;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;letter-spacing:0.2px;">
+                      🚀 &nbsp; 이메일 인증 완료하기
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 구분선 -->
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 20px;" />
+
+              <!-- 안내 -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+                    <p style="margin:0;font-size:13px;color:#92400e;line-height:1.7;">
+                      ⚠️ &nbsp;<strong>이 링크는 24시간 후 만료됩니다.</strong><br/>
+                      본인이 가입하지 않으셨다면 이 이메일을 무시하셔도 됩니다.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:20px 0 0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
+                버튼이 작동하지 않으면 아래 링크를 브라우저에 직접 붙여넣으세요:<br/>
+                <a href="{{ .ConfirmationURL }}" style="color:#3b82f6;word-break:break-all;">{{ .ConfirmationURL }}</a>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- 푸터 -->
+          <tr>
+            <td align="center" style="padding-top:24px;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.8;">
+                © 2025 BizReady &nbsp;·&nbsp; 경영지원 아카이브 서비스<br/>
+                <a href="{{ .SiteURL }}" style="color:#60a5fa;text-decoration:none;">bizready.pages.dev</a>
+                &nbsp;에서 로그인하세요
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

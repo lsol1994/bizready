@@ -6,7 +6,8 @@
     "build": "NODE_ENV=production node --max-old-space-size=4096 node_modules/.bin/vite build && node -e \"const fs=require('fs');fs.writeFileSync('dist/_routes.json',JSON.stringify({version:1,include:['/*'],exclude:['/static/*','/favicon.svg','/favicon.ico']}))\""  ,
     "preview": "wrangler pages dev",
     "deploy": "npm run build && wrangler pages deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "post-deploy": "python3 scripts/post-deploy.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",
