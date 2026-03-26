@@ -65,7 +65,7 @@ archive.get('/', async (c) => {
     isPaid = profile?.is_paid ?? false
 
     let query = supabase.from('guides')
-      .select('id, category, subcategory, title, summary, tags, is_premium, view_count, updated_at, file_url_1, file_url_2, file_url_3')
+      .select('id, category, subcategory, title, summary, tags, is_premium, view_count, like_count, updated_at, file_url_1, file_url_2, file_url_3')
       .eq('status', 'published')
       .order('created_at', { ascending: true })
 
@@ -253,12 +253,26 @@ archive.get('/', async (c) => {
                           ))}
                         </div>
                       )}
+                      {/* 조회수 + 좋아요 */}
+                      {!isLocked && (
+                        <div class="flex items-center gap-3 mt-2">
+                          {(guide.view_count ?? 0) > 0 && (
+                            <span class="flex items-center gap-1 text-xs text-gray-400">
+                              <i class="fas fa-eye text-gray-300"></i>
+                              {guide.view_count}
+                            </span>
+                          )}
+                          {(guide.like_count ?? 0) > 0 && (
+                            <span class="flex items-center gap-1 text-xs text-rose-400">
+                              <i class="fas fa-heart text-rose-300"></i>
+                              {guide.like_count}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div class="flex flex-col items-end gap-1 flex-shrink-0">
                       <i class="fas fa-chevron-right text-gray-300 text-xs group-hover:text-blue-400 transition-colors"></i>
-                      {guide.view_count > 0 && (
-                        <span class="text-xs text-gray-300">{guide.view_count}</span>
-                      )}
                     </div>
                   </a>
                 )

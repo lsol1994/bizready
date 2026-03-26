@@ -81,6 +81,55 @@ function markdownToHtml(md: string): string {
   return html
 }
 
+// ── 좋아요 POST (/dashboard/guide/:id/like) ──────────────────
+guide.post('/:id/like', async (c) => {
+  const cookie = c.req.header('Cookie') ?? ''
+  const sessionStr = parseSessionCookie(cookie)
+  if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const guideId = c.req.param('id')
+  try {
+    let sessionObj: any
+    try { sessionObj = JSON.parse(sessionStr) }
+    catch { sessionObj = JSON.parse(decodeURIComponent(sessionStr)) }
+
+    const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+    // 좋아요 중복 방지 upsert
+    const { error: likeErr } = await supabase
+      .from('guide_likes')
+      .insert({ guide_id: guideId, user_id: user.id })
+
+    if (likeErr && likeErr.code === '23505') {
+      // 이미 좋아요 → 취소 (삭제)
+      await supabase
+        .from('guide_likes')
+        .delete()
+        .eq('guide_id', guideId)
+        .eq('user_id', user.id)
+
+      // like_count -1 (0 미만 방지)
+      const { data: g } = await supabase.from('guides').select('like_count').eq('id', guideId).single()
+      const newCount = Math.max(0, (g?.like_count ?? 1) - 1)
+      await supabase.from('guides').update({ like_count: newCount }).eq('id', guideId)
+      return c.json({ ok: true, liked: false, like_count: newCount })
+    } else if (likeErr) {
+      return c.json({ ok: false, error: likeErr.message }, 500)
+    }
+
+    // 좋아요 추가 → like_count +1
+    const { data: g } = await supabase.from('guides').select('like_count').eq('id', guideId).single()
+    const newCount = (g?.like_count ?? 0) + 1
+    await supabase.from('guides').update({ like_count: newCount }).eq('id', guideId)
+    return c.json({ ok: true, liked: true, like_count: newCount })
+
+  } catch (e: any) {
+    return c.json({ ok: false, error: e.message }, 500)
+  }
+})
+
 guide.get('/:id', async (c) => {
   const cookie = c.req.header('Cookie') ?? ''
   const sessionStr = parseSessionCookie(cookie)
@@ -123,9 +172,19 @@ guide.get('/:id', async (c) => {
 
     guideData = data
 
+    // 조회수 증가
     await supabase.from('guides')
       .update({ view_count: (data.view_count ?? 0) + 1 })
       .eq('id', guideId)
+
+    // 내 좋아요 여부 조회
+    const { data: likeData } = await supabase
+      .from('guide_likes')
+      .select('id')
+      .eq('guide_id', guideId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    guideData._is_liked = !!likeData
 
     const { data: noteData } = await supabase
       .from('user_notes').select('*').eq('user_id', user.id).eq('guide_id', guideId).single()
@@ -213,8 +272,11 @@ guide.get('/:id', async (c) => {
                     <p class="text-gray-500 text-sm">{guideData.summary}</p>
                   </div>
                 </div>
-                <div class="flex items-center gap-4 text-xs text-gray-400 border-t border-gray-50 pt-3">
-                  <span><i class="fas fa-eye mr-1"></i>{guideData.view_count}회 조회</span>
+                <div class="flex items-center gap-4 text-xs text-gray-400 border-t border-gray-50 pt-3 flex-wrap">
+                  <span><i class="fas fa-eye mr-1"></i>{guideData.view_count ?? 0}회 조회</span>
+                  <span id="like-count-display">
+                    <i class="fas fa-heart mr-1 text-gray-300"></i>{guideData.like_count ?? 0}명이 도움받았어요
+                  </span>
                   <span><i class="fas fa-clock mr-1"></i>{guideData.updated_at ? new Date(guideData.updated_at).toLocaleDateString('ko-KR') : '-'}</span>
                   {guideData.updated_by && (
                     <span><i class="fas fa-user-edit mr-1"></i>{guideData.updated_by}</span>
@@ -318,6 +380,20 @@ guide.get('/:id', async (c) => {
                 </button>
                 <div id="memo-msg" class="text-xs text-center mt-2 hidden"></div>
 
+                {/* 좋아요 버튼 */}
+                <button
+                  id="like-btn"
+                  class={`w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 ${
+                    guideData._is_liked
+                      ? 'bg-rose-50 text-rose-500 border-rose-300 hover:bg-rose-100'
+                      : 'border-gray-200 text-gray-500 hover:border-rose-300 hover:text-rose-400'
+                  }`}
+                >
+                  <i id="like-icon" class={`fas fa-heart ${guideData._is_liked ? 'text-rose-500' : 'text-gray-300'}`}></i>
+                  <span id="like-label">{guideData._is_liked ? '도움이 됐어요!' : '도움이 됐어요'}</span>
+                  <span id="like-num" class="text-xs opacity-60">({guideData.like_count ?? 0})</span>
+                </button>
+
                 <hr class="my-3 border-gray-100" />
                 <button
                   id="bookmark-btn"
@@ -357,6 +433,7 @@ const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
 const GUIDE_ID = '${guideData.id}'
 const USER_ID = '${userId}'
 let isBookmarked = ${userNote?.is_bookmarked ?? false}
+let isLiked = ${guideData._is_liked ?? false}
 
 // Supabase CDN
 const script = document.createElement('script')
@@ -400,6 +477,57 @@ script.onload = () => {
     } else {
       btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-colors border border-gray-200 text-gray-600'
       lbl.textContent = '북마크 추가'
+    }
+  })
+
+  // ── 좋아요 토글 ──
+  document.getElementById('like-btn').addEventListener('click', async () => {
+    const btn   = document.getElementById('like-btn')
+    const icon  = document.getElementById('like-icon')
+    const label = document.getElementById('like-label')
+    const num   = document.getElementById('like-num')
+    const disp  = document.getElementById('like-count-display')
+
+    // 버튼 일시 비활성화
+    btn.disabled = true
+    btn.style.opacity = '0.6'
+
+    try {
+      const res  = await fetch('/dashboard/guide/' + GUIDE_ID + '/like', { method: 'POST' })
+      const data = await res.json()
+
+      if (data.ok) {
+        isLiked = data.liked
+        const cnt = data.like_count ?? 0
+
+        // 버튼 상태 업데이트
+        if (isLiked) {
+          btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 bg-rose-50 text-rose-500 border-rose-300 hover:bg-rose-100'
+          icon.className = 'fas fa-heart text-rose-500'
+          label.textContent = '도움이 됐어요!'
+        } else {
+          btn.className = 'w-full text-sm font-medium py-2 rounded-lg transition-all border flex items-center justify-center gap-2 border-gray-200 text-gray-500 hover:border-rose-300 hover:text-rose-400'
+          icon.className = 'fas fa-heart text-gray-300'
+          label.textContent = '도움이 됐어요'
+        }
+        num.textContent = '(' + cnt + ')'
+
+        // 헤더 카운트도 업데이트
+        if (disp) {
+          disp.innerHTML = '<i class="fas fa-heart mr-1 ' + (isLiked ? 'text-rose-400' : 'text-gray-300') + '"></i>' + cnt + '명이 도움받았어요'
+        }
+
+        // 좋아요 시 하트 애니메이션
+        if (isLiked) {
+          btn.style.transform = 'scale(1.05)'
+          setTimeout(() => { btn.style.transform = '' }, 200)
+        }
+      }
+    } catch(e) {
+      console.error('좋아요 처리 실패', e)
+    } finally {
+      btn.disabled = false
+      btn.style.opacity = '1'
     }
   })
 }
