@@ -79,6 +79,12 @@ app.route('/dashboard/calendar',  calendarRoute)
 app.route('/dashboard/memo',      memoRoute)
 app.route('/dashboard',           dashboardRoute)
 
+// ── 대시보드 목업 미리보기 (임시) ────────────────
+app.get('/mockup/dashboard', async (c) => {
+  const html = await import('../public/preview/dashboard-mockup.html?raw')
+  return c.html(html.default)
+})
+
 // ── 루트 리다이렉트 ─────────────────────────────
 app.get('/', (c) => {
   const cookie = c.req.header('Cookie') ?? ''

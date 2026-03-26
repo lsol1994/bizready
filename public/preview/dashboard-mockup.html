@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BizReady 대시보드 개편 미리보기</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif; background: #f1f5f9; }
+    .sidebar-gradient { background: linear-gradient(180deg, #1a3558 0%, #0f2340 60%, #0a1a30 100%); }
+    .card-hover { transition: all 0.18s; cursor: pointer; }
+    .card-hover:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.10); transform: translateY(-2px); }
+    .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #0f2544 100%); }
+    .dday-red    { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left:4px solid #ef4444; }
+    .dday-orange { background: linear-gradient(135deg,#ffedd5,#fed7aa); border-left:4px solid #f97316; }
+    .dday-yellow { background: linear-gradient(135deg,#fef9c3,#fef08a); border-left:4px solid #eab308; }
+    .dday-blue   { background: linear-gradient(135deg,#dbeafe,#bfdbfe); border-left:4px solid #3b82f6; }
+    .notice-bar  { background: linear-gradient(90deg,#fef3c7,#fde68a); }
+    .badge-new { background:#dbeafe; color:#1d4ed8; }
+    .badge-hot { background:#fee2e2; color:#b91c1c; }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<div class="bg-gradient-to-r from-blue-700 to-indigo-700 text-white text-center py-2.5 text-sm font-medium">
+  ✨ BizReady 대시보드 <span class="font-bold underline">개편 후 미리보기</span> — 실제 적용 전 시각화 목업
+</div>
+
+<div class="flex h-[calc(100vh-40px)] overflow-hidden">
+
+  <!-- 사이드바 -->
+  <aside class="hidden md:flex w-60 sidebar-gradient flex-col flex-shrink-0 overflow-y-auto">
+    <div class="px-5 py-4 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i class="fas fa-briefcase text-white text-sm"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base">BizReady</div>
+          <div class="text-sky-300 text-xs">중소기업 경영지원 플랫폼</div>
+        </div>
+      </div>
+    </div>
+    <div class="px-4 py-3 border-b border-white/10">
+      <div class="flex items-center gap-3 bg-white/10 rounded-xl px-3 py-2.5">
+        <div class="w-8 h-8 bg-gradient-to-br from-sky-400 to-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">솔</div>
+        <div>
+          <div class="text-white text-sm font-medium">솔님</div>
+          <div class="text-sky-300 text-xs">무료 플랜</div>
+        </div>
+      </div>
+    </div>
+    <nav class="flex-1 px-3 py-3 space-y-0.5">
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/15 text-white text-sm">
+        <i class="fas fa-home w-4 text-center"></i><span>홈</span>
+      </a>
+      <div class="pt-3 pb-1"><p class="px-2 text-xs font-semibold uppercase tracking-widest text-sky-300/50">메인</p></div>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
+        <i class="fas fa-book-open w-4 text-center"></i><span>업무 아카이브</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer">
+        <i class="fas fa-search w-4 text-center"></i><span>지식 검색</span>
+      </a>
+      <div class="pt-3 pb-1"><p class="px-2 text-xs font-semibold uppercase tracking-widest text-sky-300/50">내 계정</p></div>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 text-sm cursor-pointer">
+        <i class="fas fa-clipboard-check w-4 text-center"></i><span>체크리스트</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 text-sm cursor-pointer">
+        <i class="fas fa-calendar-alt w-4 text-center"></i><span>사내 주요 일정</span>
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 text-sm cursor-pointer">
+        <i class="fas fa-sticky-note w-4 text-center"></i><span>내 메모</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- 메인 콘텐츠 -->
+  <main class="flex-1 overflow-y-auto bg-gray-50">
+
+    <!-- 헤더 -->
+    <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">안녕하세요, 솔님 👋</h1>
+        <p class="text-gray-400 text-sm">오늘도 성장하는 경영지원 전문가가 되어봐요</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="relative">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input type="text" placeholder="업무 키워드 검색..." class="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-56 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        </div>
+        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold">솔</div>
+      </div>
+    </header>
+
+    <div class="px-8 py-5 max-w-6xl space-y-5">
+
+      <!-- 공지 배너 (최초 1회) -->
+      <div id="notice-banner" class="notice-bar rounded-xl px-5 py-3 flex items-center gap-3 border border-amber-200 shadow-sm">
+        <span class="text-xl flex-shrink-0">📢</span>
+        <div class="flex-1 min-w-0">
+          <span class="font-bold text-amber-800 text-sm">공지</span>
+          <span class="text-amber-700 text-sm ml-2">2026년 1분기 부가세 확정신고 기간(4/1~4/25) 안내 — 미리 서류를 준비해 두세요!</span>
+        </div>
+        <span class="text-xs text-amber-500 whitespace-nowrap flex-shrink-0">2026.03.26</span>
+        <button onclick="dismissNotice()" class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-amber-200 text-amber-500 hover:text-amber-700 transition-colors ml-1">
+          <i class="fas fa-times text-sm"></i>
+        </button>
+      </div>
+
+      <!-- 히어로 배너 -->
+      <div class="gradient-bg rounded-2xl p-6 text-white relative overflow-hidden">
+        <div class="absolute right-0 top-0 w-48 h-full opacity-10 pointer-events-none">
+          <i class="fas fa-chart-line text-9xl absolute -right-4 -top-4"></i>
+        </div>
+        <h2 class="text-lg font-bold mb-1">🎉 경영지원 올인원 아카이브에 오신 것을 환영합니다!</h2>
+        <p class="text-sky-200 text-sm mb-4">중소기업(SME)을 위한 통합 경영지원 가이드를 지금 바로 확인하세요.</p>
+        <div class="flex gap-3 flex-wrap">
+          <button class="bg-white text-blue-700 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-sky-50 transition-colors">업무 가이드 보기</button>
+          <button class="bg-white/20 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-white/30 transition-colors">입사 체크리스트</button>
+        </div>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+          <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-3"><i class="fas fa-book"></i></div>
+          <div class="text-2xl font-bold text-gray-800">87개</div>
+          <div class="text-gray-500 text-sm">총 가이드</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+          <div class="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center mb-3"><i class="fas fa-check-square"></i></div>
+          <div class="text-2xl font-bold text-gray-800">0/20</div>
+          <div class="text-gray-500 text-sm">완료 체크</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+          <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center mb-3"><i class="fas fa-sticky-note"></i></div>
+          <div class="text-2xl font-bold text-gray-800">0개</div>
+          <div class="text-gray-500 text-sm">내 메모</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+          <div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center mb-3"><i class="fas fa-clock"></i></div>
+          <div class="text-2xl font-bold text-gray-800">오늘</div>
+          <div class="text-gray-500 text-sm">최근 업데이트</div>
+        </div>
+      </div>
+
+      <!-- 세무신고 D-day 위젯 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="dday-red rounded-xl p-4 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">D-5</span>
+            <i class="fas fa-fire text-red-400 text-sm"></i>
+          </div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">원천세 신고·납부</div>
+          <div class="text-gray-500 text-xs mt-1">마감 3/31(월)</div>
+        </div>
+        <div class="dday-orange rounded-xl p-4 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">D-12</span>
+            <i class="fas fa-exclamation-triangle text-orange-400 text-sm"></i>
+          </div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">4대보험 EDI 정산</div>
+          <div class="text-gray-500 text-xs mt-1">마감 4/7(월)</div>
+        </div>
+        <div class="dday-yellow rounded-xl p-4 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full">D-30</span>
+            <i class="fas fa-file-invoice text-yellow-500 text-sm"></i>
+          </div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">부가세 확정신고</div>
+          <div class="text-gray-500 text-xs mt-1">마감 4/25(금)</div>
+        </div>
+        <div class="dday-blue rounded-xl p-4 card-hover">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">D-56</span>
+            <i class="fas fa-building text-blue-400 text-sm"></i>
+          </div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">법인세 신고·납부</div>
+          <div class="text-gray-500 text-xs mt-1">마감 5/31(일)</div>
+        </div>
+      </div>
+
+      <!-- 업무 카테고리 + 최근 가이드 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-gray-800">업무 카테고리</h2>
+            <a class="text-blue-500 text-xs hover:underline cursor-pointer">전체 보기 →</a>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center"><i class="fas fa-calculator text-sm"></i></div>
+                <span class="font-semibold text-gray-800 text-sm">회계·세무</span>
+              </div>
+              <p class="text-gray-400 text-xs mb-1">전표처리, 세금계산서</p>
+              <span class="text-xs text-blue-500 font-medium">24개 가이드</span>
+            </div>
+            <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center"><i class="fas fa-users text-sm"></i></div>
+                <span class="font-semibold text-gray-800 text-sm">인사·노무</span>
+              </div>
+              <p class="text-gray-400 text-xs mb-1">4대보험, 급여계산</p>
+              <span class="text-xs text-blue-500 font-medium">18개 가이드</span>
+            </div>
+            <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="w-8 h-8 bg-green-100 text-green-600 rounded-lg flex items-center justify-center"><i class="fas fa-building text-sm"></i></div>
+                <span class="font-semibold text-gray-800 text-sm">총무·행정</span>
+              </div>
+              <p class="text-gray-400 text-xs mb-1">비품관리, 계약서</p>
+              <span class="text-xs text-blue-500 font-medium">15개 가이드</span>
+            </div>
+            <div class="bg-white rounded-xl p-4 border border-gray-100 card-hover">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="w-8 h-8 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center"><i class="fas fa-file-invoice-dollar text-sm"></i></div>
+                <span class="font-semibold text-gray-800 text-sm">세금·신고</span>
+              </div>
+              <p class="text-gray-400 text-xs mb-1">원천세, 법인세</p>
+              <span class="text-xs text-blue-500 font-medium">12개 가이드</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-gray-800">최근 업데이트 가이드</h2>
+            <a class="text-blue-500 text-xs hover:underline cursor-pointer">전체 보기 →</a>
+          </div>
+          <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs text-gray-400">회계·세무</span>
+                  <span class="text-xs font-bold px-1.5 py-0.5 rounded badge-hot">HOT</span>
+                </div>
+                <div class="text-sm text-gray-800 font-medium">세금계산서 발행 A to Z</div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs text-gray-400">인사·노무</span>
+                  <span class="text-xs font-bold px-1.5 py-0.5 rounded badge-new">NEW</span>
+                </div>
+                <div class="text-sm text-gray-800 font-medium">신규 직원 4대보험 가입 처리</div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs text-gray-400">총무·행정</span>
+                </div>
+                <div class="text-sm text-gray-800 font-medium">법인카드 사용 및 정산 방법</div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+            </div>
+            <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="text-xs text-gray-400">세금·신고</span>
+                  <span class="text-xs font-bold px-1.5 py-0.5 rounded badge-new">NEW</span>
+                </div>
+                <div class="text-sm text-gray-800 font-medium">부가세 신고 기간과 준비 서류</div>
+              </div>
+              <i class="fas fa-chevron-right text-gray-300 text-sm"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  var NOTICE_ID   = 'notice_2026_q1_vat';
+  var STORAGE_KEY = 'bizready_dismissed_' + NOTICE_ID;
+
+  (function initNotice() {
+    if (localStorage.getItem(STORAGE_KEY) === '1') {
+      var b = document.getElementById('notice-banner');
+      if (b) b.style.display = 'none';
+    }
+  })();
+
+  function dismissNotice() {
+    localStorage.setItem(STORAGE_KEY, '1');
+    var b = document.getElementById('notice-banner');
+    if (!b) return;
+    b.style.transition = 'max-height .35s ease, opacity .35s ease, margin .35s ease, padding .35s ease';
+    b.style.overflow   = 'hidden';
+    b.style.maxHeight  = b.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      b.style.maxHeight     = '0';
+      b.style.opacity       = '0';
+      b.style.paddingTop    = '0';
+      b.style.paddingBottom = '0';
+      b.style.marginBottom  = '0';
+    });
+    setTimeout(function() { b.style.display = 'none'; }, 380);
+  }
+</script>
+</body>
+</html>
