@@ -14,21 +14,49 @@ dashboard.use(renderer)
 // general  → 총무/비품/이벤트/행정 → 파랑
 type ScheduleCategory = 'finance' | 'labor' | 'general'
 
-const CATEGORY_STYLE: Record<ScheduleCategory, { cardCls: string; badgeCls: string; iconCls: string }> = {
+const CATEGORY_STYLE: Record<ScheduleCategory, {
+  cardCls:    string
+  borderColor: string
+  accentColor: string
+  badgeBg:    string
+  badgeText:  string
+  iconBg:     string
+  iconText:   string
+  iconCls:    string
+  label:      string
+}> = {
   finance: {
-    cardCls: 'dday-card dday-red',
-    badgeCls: 'text-red-600 bg-red-100',
-    iconCls:  'fa-file-invoice-dollar',
+    cardCls:     'dday-card',
+    borderColor: '#ef4444',
+    accentColor: '#ef4444',
+    badgeBg:     '#fee2e2',
+    badgeText:   '#b91c1c',
+    iconBg:      '#fee2e2',
+    iconText:    '#ef4444',
+    iconCls:     'fa-file-invoice-dollar',
+    label:       '재무·세금',
   },
   labor: {
-    cardCls: 'dday-card dday-yellow',
-    badgeCls: 'text-yellow-700 bg-yellow-100',
-    iconCls:  'fa-users',
+    cardCls:     'dday-card',
+    borderColor: '#ca8a04',
+    accentColor: '#ca8a04',
+    badgeBg:     '#fef9c3',
+    badgeText:   '#854d0e',
+    iconBg:      '#fef9c3',
+    iconText:    '#ca8a04',
+    iconCls:     'fa-users',
+    label:       '노무·4대보험',
   },
   general: {
-    cardCls: 'dday-card dday-blue',
-    badgeCls: 'text-blue-600 bg-blue-100',
-    iconCls:  'fa-building',
+    cardCls:     'dday-card',
+    borderColor: '#3b82f6',
+    accentColor: '#3b82f6',
+    badgeBg:     '#dbeafe',
+    badgeText:   '#1d4ed8',
+    iconBg:      '#dbeafe',
+    iconText:    '#3b82f6',
+    iconCls:     'fa-building',
+    label:       '총무·행정',
   },
 }
 
@@ -68,10 +96,8 @@ const recentGuides = [
   { category: '급여관리',  title: '퇴직금 계산 방법과 지급 기준',  badge: '',    badgeColor: ''                           },
 ]
 
-// D-day 계산 — 색상은 카테고리 기반
-function calcDday(deadlineStr: string, category: ScheduleCategory): {
-  dday: number; colorCls: string; iconCls: string; badgeCls: string
-} {
+// D-day 계산 — 카테고리 스타일 포함
+function calcDday(deadlineStr: string, category: ScheduleCategory) {
   const now      = new Date()
   const deadline = new Date(deadlineStr)
   const dday     = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
@@ -216,19 +242,46 @@ dashboard.get('/', async (c) => {
             ))}
           </div>
 
-          {/* ── ③ 세무신고 D-day 위젯 ── */}
+          {/* ── ③ D-day 업무 일정 위젯 ── */}
           {ddayItems.length > 0 && (
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               {ddayItems.map((item) => (
-                <a href="/dashboard/calendar" class={`${item.colorCls} rounded-xl p-4 block`}>
-                  <div class="flex items-center justify-between mb-2">
-                    <span class={`text-xs font-bold px-2 py-0.5 rounded-full ${item.badgeCls}`}>
+                <a
+                  href="/dashboard/calendar"
+                  class="dday-card bg-white rounded-xl p-4 block border border-gray-100"
+                  style={`border-left: 4px solid ${item.borderColor};`}
+                >
+                  {/* 상단: 카테고리 라벨 + 아이콘 */}
+                  <div class="flex items-center justify-between mb-3">
+                    <span
+                      class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      style={`background:${item.iconBg}; color:${item.iconText};`}
+                    >
+                      {item.label}
+                    </span>
+                    <div
+                      class="w-7 h-7 rounded-lg flex items-center justify-center"
+                      style={`background:${item.iconBg};`}
+                    >
+                      <i class={`fas ${item.iconCls} text-xs`} style={`color:${item.iconText};`}></i>
+                    </div>
+                  </div>
+                  {/* D-day 숫자 강조 */}
+                  <div class="mb-1">
+                    <span
+                      class="text-2xl font-black"
+                      style={`color:${item.accentColor};`}
+                    >
                       D-{item.dday}
                     </span>
-                    <i class={`fas ${item.iconCls} text-sm opacity-60`}></i>
                   </div>
-                  <div class="font-bold text-gray-800 text-sm leading-snug">{item.title}</div>
-                  <div class="text-gray-500 text-xs mt-1">마감 {new Date(item.deadline).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })}</div>
+                  {/* 일정 제목 */}
+                  <div class="font-semibold text-gray-800 text-sm leading-snug mb-1">{item.title}</div>
+                  {/* 마감일 */}
+                  <div class="text-gray-400 text-xs">
+                    <i class="fas fa-calendar-alt mr-1"></i>
+                    {new Date(item.deadline).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })}
+                  </div>
                 </a>
               ))}
             </div>
@@ -296,13 +349,9 @@ dashboard.get('/', async (c) => {
         .notice-bar    { background: linear-gradient(90deg, #fef3c7, #fde68a); }
         .card-hover    { transition: all 0.15s; }
         .card-hover:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-        /* D-day 카드 */
-        .dday-card              { transition: all 0.15s; display:block; }
-        .dday-card:hover        { box-shadow: 0 4px 12px rgba(0,0,0,0.10); transform: translateY(-1px); }
-        /* 카테고리별 색상: finance=빨강 / labor=노랑 / general=파랑 */
-        .dday-red    { background: linear-gradient(135deg,#fee2e2,#fecaca); border-left:4px solid #ef4444; color: #991b1b; }
-        .dday-yellow { background: linear-gradient(135deg,#fef9c3,#fef08a); border-left:4px solid #ca8a04; color: #713f12; }
-        .dday-blue   { background: linear-gradient(135deg,#dbeafe,#bfdbfe); border-left:4px solid #3b82f6; color: #1e3a8a; }
+        /* D-day 카드 — 흰 배경 박스 + 좌측 컬러 보더 */
+        .dday-card              { transition: all 0.18s; display:block; }
+        .dday-card:hover        { box-shadow: 0 6px 20px rgba(0,0,0,0.10); transform: translateY(-2px); }
       `}</style>
 
       {/* 공지 1회 표시 JS */}
