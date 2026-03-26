@@ -94,14 +94,13 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath }: SidebarP
         <div>
           <button
             onclick="toggleArchiveMenu(this)"
-            id="archive-menu-btn"
-            class={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'bg-white/15 text-white' : 'text-sky-200 hover:text-white hover:bg-white/10'}`}
+            class={`archive-menu-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'bg-white/15 text-white' : 'text-sky-200 hover:text-white hover:bg-white/10'}`}
           >
             <i class="fas fa-book-open w-4 text-center text-sm flex-shrink-0"></i>
             <span class="flex-1 text-left">업무 아카이브</span>
-            <i id="archive-chevron" class={`fas fa-chevron-down text-xs transition-transform duration-200 ${archiveOpen ? 'rotate-180' : ''}`}></i>
+            <i class={`archive-chevron fas fa-chevron-down text-xs transition-transform duration-200 ${archiveOpen ? 'rotate-180' : ''}`}></i>
           </button>
-          <div id="archive-submenu" class={`overflow-hidden transition-all duration-200 ${archiveOpen ? '' : 'hidden'}`}>
+          <div class={`archive-submenu overflow-hidden transition-all duration-200 ${archiveOpen ? '' : 'hidden'}`}>
             <div class="pl-4 pr-1 pt-1 pb-1 space-y-0.5">
               {ARCHIVE_SUBS.map(sub => (
                 <a
@@ -258,32 +257,26 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
   }
 
   // ── 아코디언: 업무 아카이브 ──────────────────────
-  // 데스크탑 + 모바일 드로어 두 곳에 같은 ID가 존재하므로
-  // querySelectorAll로 모두 찾아 동시에 토글
+  // 클릭된 버튼 기준으로 형제 요소(.archive-submenu)를 직접 찾음
+  // ID 중복 문제 완전 해소
   window.toggleArchiveMenu = function(triggerEl) {
-    // 클릭된 버튼이 속한 aside 안의 요소만 타깃
-    var ctx = triggerEl
-      ? triggerEl.closest('aside')
-      : document.getElementById('mobile-drawer') && document.getElementById('mobile-drawer').classList.contains('drawer-open')
-        ? document.getElementById('mobile-drawer')
-        : document.getElementById('desktop-sidebar');
-
-    if (!ctx) {
-      // fallback: 보이는 aside 안에서 처리
-      ctx = document.querySelector('aside:not(.hidden)') || document.querySelector('aside');
-    }
-
-    var menu    = ctx ? ctx.querySelector('[id="archive-submenu"]')  : null;
-    var chevron = ctx ? ctx.querySelector('[id="archive-chevron"]')  : null;
-    var btn     = ctx ? ctx.querySelector('[id="archive-menu-btn"]') : null;
+    if (!triggerEl) return;
+    var parent  = triggerEl.parentElement;           // <div> wrapping btn + submenu
+    var menu    = parent ? parent.querySelector('.archive-submenu')  : null;
+    var chevron = triggerEl.querySelector('.archive-chevron');
     if (!menu) return;
 
     var isHidden = menu.classList.contains('hidden');
-    menu.classList.toggle('hidden', !isHidden);
-    if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
-    if (btn) {
-      btn.classList.toggle('bg-white/15', isHidden);
-      btn.classList.toggle('text-white',  isHidden);
+    if (isHidden) {
+      menu.classList.remove('hidden');
+      if (chevron) chevron.style.transform = 'rotate(180deg)';
+      triggerEl.classList.add('bg-white/15', 'text-white');
+      triggerEl.classList.remove('text-sky-200');
+    } else {
+      menu.classList.add('hidden');
+      if (chevron) chevron.style.transform = '';
+      triggerEl.classList.remove('bg-white/15', 'text-white');
+      triggerEl.classList.add('text-sky-200');
     }
   }
 
@@ -293,7 +286,7 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
     const query = window.location.search;
     const full  = path + query;
 
-    document.querySelectorAll('#archive-submenu a').forEach(function(link) {
+    document.querySelectorAll('.archive-submenu a').forEach(function(link) {
       const href = link.getAttribute('href') || '';
       if (full === href || (href !== '/dashboard/archive' && full.startsWith(href.split('?')[0]) && full.includes(href.split('?')[1] || ''))) {
         link.classList.add('text-white', 'bg-white/15');
@@ -307,7 +300,7 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
       const hPath = href.split('?')[0];
       const isHome = hPath === '/dashboard';
       const match  = isHome ? path === '/dashboard' : path.startsWith(hPath);
-      if (match && !link.closest('#archive-submenu')) {
+      if (match && !link.closest('.archive-submenu')) {
         link.classList.add('active', 'text-white');
         link.classList.remove('text-sky-200', 'text-sky-300');
       }
