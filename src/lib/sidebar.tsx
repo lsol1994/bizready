@@ -4,10 +4,12 @@
  * - 데스크탑(md+): 고정 사이드바 (w-64)
  * - 모바일: 숨김 + 햄버거 버튼으로 드로어 열기
  *
- * 사용법:
- *   import { Sidebar, MobileHeader } from '../lib/sidebar'
- *   <MobileHeader userName="홍길동" title="페이지 제목" />
- *   <Sidebar userName="홍길동" userInitial="홍" isPaid={false} currentPath="/dashboard/archive" />
+ * [수정 이력]
+ * v3 - 2026-03-26: 업무 아카이브 아코디언 완전 재작성
+ *   - data-sidebar 속성으로 데스크탑/모바일 구분
+ *   - onclick 에서 this 대신 data-sidebar-id 기반 탐색
+ *   - Tailwind '/' 클래스 classList.add 버그 → CSS custom class 방식 전환
+ *   - <i> 자식요소 클릭 시 event.currentTarget 보장을 위해 inline onclick → addEventListener 방식
  */
 
 export interface SidebarProps {
@@ -42,8 +44,14 @@ function menuCls(active: boolean): string {
 }
 
 // ── 사이드바 내부 콘텐츠 (데스크탑 + 모바일 드로어 공용) ──
-function SidebarContent({ userName, userInitial, isPaid, currentPath }: SidebarProps) {
+// sidebarId: 'desktop' | 'mobile' — 각 버튼/서브메뉴 고유 ID 생성에 사용
+function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId }: SidebarProps & { sidebarId: string }) {
   const archiveOpen = currentPath.startsWith('/dashboard/archive') || currentPath.startsWith('/dashboard/guide')
+
+  // 각 사이드바 인스턴스마다 고유 ID
+  const btnId     = `archive-btn-${sidebarId}`
+  const submenuId = `archive-sub-${sidebarId}`
+  const chevronId = `archive-chev-${sidebarId}`
 
   return (
     <>
@@ -91,16 +99,30 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath }: SidebarP
         </div>
 
         {/* 업무 아카이브 아코디언 */}
-        <div>
+        <div class="archive-accordion-wrap">
+          {/*
+            ★ onclick="toggleArchiveMenu(this)" 제거 →
+               JS에서 querySelectorAll + addEventListener 로 등록
+               이유: <i> 자식 클릭 시 this가 <i>가 되어 버그 발생
+          */}
           <button
-            onclick="toggleArchiveMenu(this)"
-            class={`archive-menu-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'bg-white/15 text-white' : 'text-sky-200 hover:text-white hover:bg-white/10'}`}
+            id={btnId}
+            data-submenu={submenuId}
+            data-chevron={chevronId}
+            class={`archive-accordion-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'archive-btn-open text-white' : 'text-sky-200 hover:text-white'}`}
+            type="button"
           >
-            <i class="fas fa-book-open w-4 text-center text-sm flex-shrink-0"></i>
-            <span class="flex-1 text-left">업무 아카이브</span>
-            <i class={`archive-chevron fas fa-chevron-down text-xs transition-transform duration-200 ${archiveOpen ? 'rotate-180' : ''}`}></i>
+            <i class="fas fa-book-open w-4 text-center text-sm flex-shrink-0 pointer-events-none"></i>
+            <span class="flex-1 text-left pointer-events-none">업무 아카이브</span>
+            <i
+              id={chevronId}
+              class={`fas fa-chevron-down text-xs transition-transform duration-200 pointer-events-none ${archiveOpen ? 'rotate-180' : ''}`}
+            ></i>
           </button>
-          <div class={`archive-submenu overflow-hidden transition-all duration-200 ${archiveOpen ? '' : 'hidden'}`}>
+          <div
+            id={submenuId}
+            class={`overflow-hidden transition-all duration-200 ${archiveOpen ? '' : 'hidden'}`}
+          >
             <div class="pl-4 pr-1 pt-1 pb-1 space-y-0.5">
               {ARCHIVE_SUBS.map(sub => (
                 <a
@@ -173,13 +195,11 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath }: SidebarP
 
 // ── 메인 Sidebar 컴포넌트 ──────────────────────────────────
 export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarProps) {
-  const archiveOpen = currentPath.startsWith('/dashboard/archive') || currentPath.startsWith('/dashboard/guide')
-
   return (
     <>
       {/* ── 데스크탑 사이드바 (md 이상에서만 표시) ── */}
       <aside id="desktop-sidebar" class="hidden md:flex w-64 sidebar-gradient flex-col flex-shrink-0 overflow-y-auto">
-        <SidebarContent userName={userName} userInitial={userInitial} isPaid={isPaid} currentPath={currentPath} />
+        <SidebarContent userName={userName} userInitial={userInitial} isPaid={isPaid} currentPath={currentPath} sidebarId="desktop" />
       </aside>
 
       {/* ── 모바일 드로어 오버레이 (md 미만에서만 동작) ── */}
@@ -198,10 +218,11 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
         <button
           onclick="closeMobileDrawer()"
           class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors z-10"
+          type="button"
         >
           <i class="fas fa-times text-sm"></i>
         </button>
-        <SidebarContent userName={userName} userInitial={userInitial} isPaid={isPaid} currentPath={currentPath} />
+        <SidebarContent userName={userName} userInitial={userInitial} isPaid={isPaid} currentPath={currentPath} sidebarId="mobile" />
       </aside>
 
       {/* ── 공통 스타일 + JS ── */}
@@ -219,6 +240,13 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
           background: rgba(255,255,255,0.15);
           box-shadow: inset 3px 0 0 rgba(147,197,253,0.7);
         }
+        /* 아코디언 버튼 열림 상태 — Tailwind 슬래시 클래스 JS 조작 불가 문제 우회 */
+        .archive-accordion-btn.archive-btn-open {
+          background: rgba(255,255,255,0.15);
+        }
+        .archive-accordion-btn:not(.archive-btn-open):hover {
+          background: rgba(255,255,255,0.10);
+        }
         .rotate-180 { transform: rotate(180deg); }
         aside::-webkit-scrollbar { width: 3px; }
         aside::-webkit-scrollbar-track { background: transparent; }
@@ -230,7 +258,6 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
         #mobile-overlay.overlay-show {
           display: block !important;
         }
-        /* 모바일일 때 body 스크롤 잠금 */
         body.drawer-active {
           overflow: hidden;
         }
@@ -238,93 +265,124 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
 
       <script dangerouslySetInnerHTML={{ __html: `
 (function() {
-  // ── 모바일 드로어 열기/닫기 ────────────────────────
+
+  /* ── 모바일 드로어 열기/닫기 ── */
   window.openMobileDrawer = function() {
-    const drawer  = document.getElementById('mobile-drawer');
-    const overlay = document.getElementById('mobile-overlay');
+    var drawer  = document.getElementById('mobile-drawer');
+    var overlay = document.getElementById('mobile-overlay');
     if (!drawer) return;
     drawer.classList.add('drawer-open');
-    overlay.classList.add('overlay-show');
+    if (overlay) overlay.classList.add('overlay-show');
     document.body.classList.add('drawer-active');
-  }
+  };
   window.closeMobileDrawer = function() {
-    const drawer  = document.getElementById('mobile-drawer');
-    const overlay = document.getElementById('mobile-overlay');
+    var drawer  = document.getElementById('mobile-drawer');
+    var overlay = document.getElementById('mobile-overlay');
     if (!drawer) return;
     drawer.classList.remove('drawer-open');
-    overlay.classList.remove('overlay-show');
+    if (overlay) overlay.classList.remove('overlay-show');
     document.body.classList.remove('drawer-active');
+  };
+
+  /* ── 업무 아카이브 아코디언 — addEventListener 방식 ──
+     이유: onclick="fn(this)" 에서 자식 <i> 클릭 시 this = <i> 가 돼서
+           parentElement 탐색이 엉킴. currentTarget은 항상 버튼 자신을 가리킴.
+     각 버튼마다 data-submenu / data-chevron 속성으로 타겟 ID를 명시해 둠.
+  */
+  function initArchiveAccordion() {
+    var btns = document.querySelectorAll('.archive-accordion-btn');
+    btns.forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        // currentTarget = 항상 이벤트를 등록한 버튼 자신
+        var button    = e.currentTarget;
+        var submenuId = button.getAttribute('data-submenu');
+        var chevronId = button.getAttribute('data-chevron');
+        var submenu   = submenuId ? document.getElementById(submenuId) : null;
+        var chevron   = chevronId ? document.getElementById(chevronId) : null;
+
+        if (!submenu) return;
+
+        var isHidden = submenu.classList.contains('hidden');
+
+        if (isHidden) {
+          /* 열기 */
+          submenu.classList.remove('hidden');
+          button.classList.add('archive-btn-open', 'text-white');
+          button.classList.remove('text-sky-200');
+          if (chevron) chevron.classList.add('rotate-180');
+        } else {
+          /* 닫기 */
+          submenu.classList.add('hidden');
+          button.classList.remove('archive-btn-open', 'text-white');
+          button.classList.add('text-sky-200');
+          if (chevron) chevron.classList.remove('rotate-180');
+        }
+      });
+    });
   }
 
-  // ── 아코디언: 업무 아카이브 ──────────────────────
-  // 클릭된 버튼 기준으로 형제 요소(.archive-submenu)를 직접 찾음
-  // ID 중복 문제 완전 해소
-  window.toggleArchiveMenu = function(triggerEl) {
-    if (!triggerEl) return;
-    var parent  = triggerEl.parentElement;           // <div> wrapping btn + submenu
-    var menu    = parent ? parent.querySelector('.archive-submenu')  : null;
-    var chevron = triggerEl.querySelector('.archive-chevron');
-    if (!menu) return;
+  /* ── 현재 URL 기반 active 하이라이트 ── */
+  function highlightActive() {
+    var path  = window.location.pathname;
+    var query = window.location.search;
+    var full  = path + query;
 
-    var isHidden = menu.classList.contains('hidden');
-    if (isHidden) {
-      menu.classList.remove('hidden');
-      if (chevron) chevron.style.transform = 'rotate(180deg)';
-      triggerEl.classList.add('bg-white/15', 'text-white');
-      triggerEl.classList.remove('text-sky-200');
-    } else {
-      menu.classList.add('hidden');
-      if (chevron) chevron.style.transform = '';
-      triggerEl.classList.remove('bg-white/15', 'text-white');
-      triggerEl.classList.add('text-sky-200');
-    }
-  }
-
-  // ── 현재 URL 기반 active 표시 ────────────────────
-  (function highlightActive() {
-    const path  = window.location.pathname;
-    const query = window.location.search;
-    const full  = path + query;
-
-    document.querySelectorAll('.archive-submenu a').forEach(function(link) {
-      const href = link.getAttribute('href') || '';
-      if (full === href || (href !== '/dashboard/archive' && full.startsWith(href.split('?')[0]) && full.includes(href.split('?')[1] || ''))) {
+    /* 아카이브 서브메뉴 active */
+    document.querySelectorAll('[id^="archive-sub-"] a').forEach(function(link) {
+      var href = link.getAttribute('href') || '';
+      var hPath = href.split('?')[0];
+      var hQuery = href.split('?')[1] || '';
+      if (full === href ||
+          (href !== '/dashboard/archive' && path.startsWith(hPath) && (!hQuery || full.includes(hQuery)))) {
         link.classList.add('text-white', 'bg-white/15');
         link.classList.remove('text-sky-300');
       }
     });
 
+    /* 일반 사이드바 링크 active */
     document.querySelectorAll('aside a[href]').forEach(function(link) {
-      const href = link.getAttribute('href') || '';
+      var href = link.getAttribute('href') || '';
       if (!href.startsWith('/dashboard')) return;
-      const hPath = href.split('?')[0];
-      const isHome = hPath === '/dashboard';
-      const match  = isHome ? path === '/dashboard' : path.startsWith(hPath);
-      if (match && !link.closest('.archive-submenu')) {
+      var hPath = href.split('?')[0];
+      var isHome = hPath === '/dashboard';
+      var match  = isHome ? path === '/dashboard' : path.startsWith(hPath);
+      if (match && !link.closest('[id^="archive-sub-"]')) {
         link.classList.add('active', 'text-white');
         link.classList.remove('text-sky-200', 'text-sky-300');
       }
     });
-  })();
+  }
 
-  // ── ESC 키로 드로어 닫기 ─────────────────────────
+  /* ── ESC 키로 드로어 닫기 ── */
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeMobileDrawer();
+    if (e.key === 'Escape') window.closeMobileDrawer();
   });
+
+  /* ── DOM 준비 후 초기화 ── */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      initArchiveAccordion();
+      highlightActive();
+    });
+  } else {
+    initArchiveAccordion();
+    highlightActive();
+  }
+
 })();
       `}} />
     </>
   )
 }
 
-// ── 모바일 상단 헤더 (햄버거 버튼 포함) ───────────────────
-// 각 페이지의 <header> 안에서 모바일에서만 표시
+// ── 모바일 상단 햄버거 버튼 ───────────────────────────────
 export function MobileMenuButton() {
   return (
     <button
       onclick="openMobileDrawer()"
       class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors mr-1"
       aria-label="메뉴 열기"
+      type="button"
     >
       <i class="fas fa-bars text-gray-600 text-lg"></i>
     </button>
