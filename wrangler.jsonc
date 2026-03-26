@@ -6,7 +6,18 @@
   "compatibility_flags": [
     "nodejs_compat"
   ]
-  // 환경변수는 Cloudflare Pages Secret으로 관리 (wrangler pages secret put)
-  // SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
-  // PORTONE_V2_STORE_ID, PORTONE_V2_CHANNEL_KEY_KAKAO, PORTONE_V2_CHANNEL_KEY_TOSS, PORTONE_V2_API_SECRET
+  // ── 환경변수 (Cloudflare Pages Secret으로 관리) ──────────────
+  // wrangler pages secret put SUPABASE_URL
+  // wrangler pages secret put SUPABASE_ANON_KEY
+  // wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY
+  // wrangler pages secret put PORTONE_V2_STORE_ID
+  // wrangler pages secret put PORTONE_V2_CHANNEL_KEY_KAKAO
+  // wrangler pages secret put PORTONE_V2_CHANNEL_KEY_TOSS
+  // wrangler pages secret put PORTONE_V2_API_SECRET
+  // wrangler pages secret put RESEND_API_KEY
+  //
+  // ── 세무 리마인더 Cron ────────────────────────────────────────
+  // Cloudflare Pages는 Cron Trigger 미지원
+  // → 외부 Cron 서비스(cron-job.org)에서 매일 09:00 KST(00:00 UTC) 아래 URL 호출:
+  //   GET https://bizready.pages.dev/api/reminder/send
 }
