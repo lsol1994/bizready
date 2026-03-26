@@ -93,7 +93,7 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath }: SidebarP
         {/* 업무 아카이브 아코디언 */}
         <div>
           <button
-            onclick="toggleArchiveMenu()"
+            onclick="toggleArchiveMenu(this)"
             id="archive-menu-btn"
             class={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'bg-white/15 text-white' : 'text-sky-200 hover:text-white hover:bg-white/10'}`}
           >
@@ -258,16 +258,33 @@ export function Sidebar({ userName, userInitial, isPaid, currentPath }: SidebarP
   }
 
   // ── 아코디언: 업무 아카이브 ──────────────────────
-  window.toggleArchiveMenu = function() {
-    const menu    = document.getElementById('archive-submenu');
-    const chevron = document.getElementById('archive-chevron');
-    const btn     = document.getElementById('archive-menu-btn');
+  // 데스크탑 + 모바일 드로어 두 곳에 같은 ID가 존재하므로
+  // querySelectorAll로 모두 찾아 동시에 토글
+  window.toggleArchiveMenu = function(triggerEl) {
+    // 클릭된 버튼이 속한 aside 안의 요소만 타깃
+    var ctx = triggerEl
+      ? triggerEl.closest('aside')
+      : document.getElementById('mobile-drawer') && document.getElementById('mobile-drawer').classList.contains('drawer-open')
+        ? document.getElementById('mobile-drawer')
+        : document.getElementById('desktop-sidebar');
+
+    if (!ctx) {
+      // fallback: 보이는 aside 안에서 처리
+      ctx = document.querySelector('aside:not(.hidden)') || document.querySelector('aside');
+    }
+
+    var menu    = ctx ? ctx.querySelector('[id="archive-submenu"]')  : null;
+    var chevron = ctx ? ctx.querySelector('[id="archive-chevron"]')  : null;
+    var btn     = ctx ? ctx.querySelector('[id="archive-menu-btn"]') : null;
     if (!menu) return;
-    const isHidden = menu.classList.contains('hidden');
+
+    var isHidden = menu.classList.contains('hidden');
     menu.classList.toggle('hidden', !isHidden);
-    chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
-    btn.classList.toggle('bg-white/15', isHidden);
-    btn.classList.toggle('text-white',  isHidden);
+    if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+    if (btn) {
+      btn.classList.toggle('bg-white/15', isHidden);
+      btn.classList.toggle('text-white',  isHidden);
+    }
   }
 
   // ── 현재 URL 기반 active 표시 ────────────────────
