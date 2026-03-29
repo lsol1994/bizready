@@ -15,6 +15,7 @@
   // wrangler pages secret put PORTONE_V2_CHANNEL_KEY_TOSS
   // wrangler pages secret put PORTONE_V2_API_SECRET
   // wrangler pages secret put RESEND_API_KEY
+  // wrangler pages secret put ADMIN_EMAIL
   //
   // ── 세무 리마인더 Cron ────────────────────────────────────────
   // Cloudflare Pages는 Cron Trigger 미지원

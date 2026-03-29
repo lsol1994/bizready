@@ -1,59 +1,28 @@
 import { Hono } from 'hono'
 import { renderer } from '../renderer'
-import { parseSessionCookie } from '../lib/session'
+import { parseSessionCookie, parseSessionObj } from '../lib/session'
 import { getSupabaseClientWithToken, getSupabaseAdmin } from '../lib/supabase'
 import type { Env } from '../lib/supabase'
 
 const adminRoute = new Hono<{ Bindings: Env }>()
 adminRoute.use(renderer)
 
-const ADMIN_EMAIL = 'lsol3264@gmail.com'
-
 // ── 관리자 인증 미들웨어 ────────────────────────────
 async function requireAdmin(c: any): Promise<{ user: any } | null> {
   const cookieHeader = c.req.header('Cookie') ?? ''
-  
-  // 쿠키 원문 로그 (디버깅용, 프로덕션에서도 첫 50자만)
-  console.log('[Admin Auth] Cookie header length:', cookieHeader.length, '| preview:', cookieHeader.substring(0, 80))
-  
   const sessionStr = parseSessionCookie(cookieHeader)
-  if (!sessionStr) {
-    console.log('[Admin Auth] No session cookie found')
-    return null
-  }
-  
+  if (!sessionStr) return null
+
   try {
-    // sessionStr이 이미 decoded JSON 문자열
-    let sessionObj: any
-    try {
-      sessionObj = JSON.parse(sessionStr)
-    } catch {
-      // 혹시 double-encoded인 경우 한 번 더 decode
-      sessionObj = JSON.parse(decodeURIComponent(sessionStr))
-    }
-    
-    if (!sessionObj?.access_token) {
-      console.log('[Admin Auth] No access_token in session')
-      return null
-    }
-    
+    const sessionObj = parseSessionObj(sessionStr)
+    if (!sessionObj?.access_token) return null
+
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error) {
-      console.log('[Admin Auth] getUser error:', error.message)
-      return null
-    }
-    if (!user) {
-      console.log('[Admin Auth] No user returned')
-      return null
-    }
-    
-    console.log('[Admin Auth] User email:', user.email, '| Admin?', user.email === ADMIN_EMAIL)
-    if (user.email !== ADMIN_EMAIL) return null
+    if (error || !user) return null
+    if (user.email !== c.env.ADMIN_EMAIL) return null
     return { user }
-  } catch (e: any) {
-    console.error('[Admin Auth] Exception:', e.message)
+  } catch {
     return null
   }
 }

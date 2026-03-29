@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { renderer } from '../renderer'
-import { parseSessionCookie } from '../lib/session'
+import { parseSessionCookie, parseSessionObj } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
 import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
@@ -53,6 +53,11 @@ function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// PostgREST 쿼리 문자열에 삽입될 특수문자 제거 (S1 보안 수정)
+function sanitizeSearch(q: string): string {
+  return q.replace(/[%{},\\]/g, '').trim().slice(0, 100)
+}
+
 // 요약문에서 검색어 주변 컨텍스트 추출 (앞뒤 50자)
 function excerpt(text: string, q: string): string {
   if (!text) return ''
@@ -88,10 +93,7 @@ searchRoute.get('/', async (c) => {
   let isPaid      = false
 
   try {
-    let sessionObj: any
-    try { sessionObj = JSON.parse(sessionStr) }
-    catch { sessionObj = JSON.parse(decodeURIComponent(sessionStr)) }
-
+    const sessionObj = parseSessionObj(sessionStr)
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user }, error: userErr } = await supabase.auth.getUser()
     if (userErr || !user) return c.redirect('/login?error=session_expired')
@@ -103,11 +105,12 @@ searchRoute.get('/', async (c) => {
     isPaid = profile?.is_paid ?? false
 
     if (q) {
+      const sq = sanitizeSearch(q)
       let query = supabase
         .from('guides')
         .select('id, category, subcategory, title, summary, tags, is_premium, view_count')
         .eq('status', 'published')
-        .or(`title.ilike.%${q}%,summary.ilike.%${q}%,tags.cs.{${q}}`)
+        .or(`title.ilike.%${sq}%,summary.ilike.%${sq}%,tags.cs.{${sq}}`)
         .order('view_count', { ascending: false })
         .limit(40)
 

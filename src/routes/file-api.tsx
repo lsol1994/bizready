@@ -1,10 +1,9 @@
 import { Hono } from 'hono'
 import type { Env } from '../lib/supabase'
 import { getSupabaseAdmin } from '../lib/supabase'
-import { parseSessionCookie } from '../lib/session'
+import { parseSessionCookie, parseSessionObj } from '../lib/session'
 
 const fileApi = new Hono<{ Bindings: Env }>()
-const ADMIN_EMAIL = 'lsol3264@gmail.com'
 const BUCKET = 'guide-files'
 
 async function requireAdmin(c: any) {
@@ -12,14 +11,12 @@ async function requireAdmin(c: any) {
   const sessionStr = parseSessionCookie(cookie)
   if (!sessionStr) return null
   try {
-    let sessionObj: any
-    try { sessionObj = JSON.parse(sessionStr) }
-    catch { sessionObj = JSON.parse(decodeURIComponent(sessionStr)) }
+    const sessionObj = parseSessionObj(sessionStr)
     if (!sessionObj?.access_token) return null
     const { getSupabaseClientWithToken } = await import('../lib/supabase')
     const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email !== ADMIN_EMAIL) return null
+    if (!user || user.email !== c.env.ADMIN_EMAIL) return null
     return { user }
   } catch { return null }
 }

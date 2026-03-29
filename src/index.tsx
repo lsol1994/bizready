@@ -17,6 +17,7 @@ import memoRoute         from './routes/memo'
 import reminderRoute     from './routes/reminder'
 import settingsRoute     from './routes/settings'
 import bookmarkRoute    from './routes/bookmark'
+import checklistApi    from './routes/checklist-api'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -61,7 +62,10 @@ app.route('/api/payment', paymentApi)
 // ── 파일 업로드/다운로드 API ──────────────────────────
 app.route('/api/files', fileApi)
 
-// ── 관리자 라우트 (lsol3264@gmail.com 전용) ───────
+// ── 체크리스트 커스텀 항목 API ─────────────────────
+app.route('/api/checklist', checklistApi)
+
+// ── 관리자 라우트 (ADMIN_EMAIL 환경변수로 관리) ────
 app.route('/admin', adminRoute)
 
 // ── 보호 라우트 미들웨어 (/dashboard/*) ───────────

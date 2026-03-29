@@ -1,4 +1,12 @@
 // 세션 쿠키 유틸리티
+export function parseSessionObj(sessionStr: string): any {
+  try {
+    return JSON.parse(sessionStr)
+  } catch {
+    return JSON.parse(decodeURIComponent(sessionStr))
+  }
+}
+
 export function parseSessionCookie(cookieHeader: string | null): string | null {
   if (!cookieHeader) return null
   // sb-session= 이후 ; 전까지 모두 가져옴 (URL인코딩된 = 포함)

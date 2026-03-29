@@ -18,6 +18,9 @@ export type Env = {
   // ── Resend (이메일 발송) ───────────────────────────────────
   RESEND_API_KEY: string                // ❌ 서버사이드 전용
 
+  // ── 관리자 ────────────────────────────────────────────────
+  ADMIN_EMAIL: string                   // ❌ 서버사이드 전용 — 관리자 이메일
+
   // ── 포트원 V2 ─────────────────────────────────────────────
   PORTONE_V2_STORE_ID: string           // Store ID (브라우저 노출 허용)
   PORTONE_V2_CHANNEL_KEY_KAKAO: string  // 카카오페이 채널 키 (브라우저 노출 허용)
