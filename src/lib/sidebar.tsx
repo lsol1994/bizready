@@ -171,6 +171,14 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
           <span>내 메모</span>
         </a>
 
+        <a href="/dashboard/chat" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/chat'))}>
+          <i class="fas fa-robot w-4 text-center text-sm"></i>
+          <span>AI 챗봇</span>
+          {!isPaid && (
+            <span class="ml-auto text-xs bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded-full font-medium">PRO</span>
+          )}
+        </a>
+
         <div class="pt-3 pb-1">
           <p class="sidebar-section-label px-2 text-xs font-semibold uppercase tracking-widest">설정</p>
         </div>

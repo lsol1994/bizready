@@ -18,6 +18,8 @@ import reminderRoute     from './routes/reminder'
 import settingsRoute     from './routes/settings'
 import bookmarkRoute    from './routes/bookmark'
 import checklistApi    from './routes/checklist-api'
+import chatRoute       from './routes/chat'
+import chatApi         from './routes/chat-api'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -65,6 +67,9 @@ app.route('/api/files', fileApi)
 // ── 체크리스트 커스텀 항목 API ─────────────────────
 app.route('/api/checklist', checklistApi)
 
+// ── AI 챗봇 API ────────────────────────────────────
+app.route('/api/chat', chatApi)
+
 // ── 관리자 라우트 (ADMIN_EMAIL 환경변수로 관리) ────
 app.route('/admin', adminRoute)
 
@@ -86,6 +91,7 @@ app.route('/dashboard/payment',   paymentRoute)
 app.route('/dashboard/calendar',  calendarRoute)
 app.route('/dashboard/memo',      memoRoute)
 app.route('/dashboard/settings',  settingsRoute)
+app.route('/dashboard/chat',      chatRoute)
 app.route('/dashboard',           dashboardRoute)
 
 // ── 리마인더 API (인증 불필요 — Cron Trigger 진입점) ────
