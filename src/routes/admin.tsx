@@ -742,7 +742,7 @@ create policy "authenticated users can read public announcements"
       </div>
 
       {/* ══ 파일 관리 스크립트 ══ */}
-      <script>{`
+      <script dangerouslySetInnerHTML={{ __html: `
         let _fileGuideId = ''
         function manageFiles(guideId, title, u1, n1, u2, n2, u3, n3) {
           _fileGuideId = guideId
@@ -804,10 +804,10 @@ create policy "authenticated users can read public announcements"
           if (data.ok) location.reload()
           else alert('삭제 실패: ' + data.error)
         }
-      `}</script>
+      `}}></script>
 
       {/* ══ 메인 스크립트 ══ */}
-      <script>{`
+      <script dangerouslySetInnerHTML={{ __html: `
         // ── 탭 전환 ─────────────────────────────────────────
         function switchTab(id) {
           document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.add('hidden') })
@@ -1153,7 +1153,7 @@ create policy "authenticated users can read public announcements"
 
         // ── 초기화 ──────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', function() { updateSubcategory('') })
-      `}</script>
+      `}}></script>
 
     </div>,
     { title: '관리자 | BizReady' }
