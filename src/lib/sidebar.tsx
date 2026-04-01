@@ -184,6 +184,11 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
           <span>연차 계산기</span>
         </a>
 
+        <a href="/dashboard/salary-calculator" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/salary-calculator'))}>
+          <i class="fas fa-coins w-4 text-center text-sm"></i>
+          <span>급여 계산기</span>
+        </a>
+
         <div class="pt-3 pb-1">
           <p class="sidebar-section-label px-2 text-xs font-semibold uppercase tracking-widest">설정</p>
         </div>

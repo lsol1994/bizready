@@ -20,7 +20,8 @@ import bookmarkRoute    from './routes/bookmark'
 import checklistApi    from './routes/checklist-api'
 import chatRoute       from './routes/chat'
 import chatApi         from './routes/chat-api'
-import leaveCalcRoute  from './routes/leave-calculator'
+import leaveCalcRoute   from './routes/leave-calculator'
+import salaryCalcRoute  from './routes/salary-calculator'
 import { getSupabaseAdmin } from './lib/supabase'
 import type { Env } from './lib/supabase'
 
@@ -93,7 +94,8 @@ app.route('/dashboard/calendar',  calendarRoute)
 app.route('/dashboard/memo',      memoRoute)
 app.route('/dashboard/settings',  settingsRoute)
 app.route('/dashboard/chat',             chatRoute)
-app.route('/dashboard/leave-calculator', leaveCalcRoute)
+app.route('/dashboard/leave-calculator',  leaveCalcRoute)
+app.route('/dashboard/salary-calculator', salaryCalcRoute)
 app.route('/dashboard',           dashboardRoute)
 
 // ── 리마인더 API (인증 불필요 — Cron Trigger 진입점) ────
