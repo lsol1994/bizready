@@ -28,8 +28,8 @@ export interface MobileHeaderProps {
 // 아카이브 서브 카테고리
 const ARCHIVE_SUBS = [
   { label: '세무/회계', cat: '세무회계',  icon: 'fa-calculator' },
-  { label: '총무',     cat: '총무',       icon: 'fa-building' },
   { label: '인사/노무', cat: '인사노무',  icon: 'fa-users' },
+  { label: '총무',     cat: '총무',       icon: 'fa-building' },
 ]
 
 function isActive(currentPath: string, href: string): boolean {

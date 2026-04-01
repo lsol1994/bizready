@@ -52,9 +52,21 @@ salaryCalcRoute.get('/', async (c) => {
               </div>
               <div>
                 <h1 class="text-xl font-bold text-gray-800">급여 계산기</h1>
-                <p class="text-xs text-gray-500 mt-0.5">2026년 4대보험 요율 기준 · 세후 실수령액 계산</p>
+                <p class="text-xs text-gray-500 mt-0.5">4대보험 및 원천세 공제 후 실수령액 계산</p>
               </div>
-              <span class="ml-auto text-xs px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full font-semibold">2026년 기준</span>
+              <span id="year-badge" class="ml-auto text-xs px-2.5 py-1 bg-violet-100 text-violet-700 rounded-full font-semibold">—년 기준</span>
+            </div>
+
+            {/* 적용 기준 정보 배너 */}
+            <div id="basis-banner" class="mb-4 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1 hidden">
+              <div class="flex items-center gap-1.5">
+                <i class="fas fa-shield-alt flex-shrink-0"></i>
+                <span id="ins-basis-text"></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fas fa-file-invoice flex-shrink-0"></i>
+                <span id="tax-basis-text"></span>
+              </div>
             </div>
 
             {/* 입력 폼 */}
@@ -207,7 +219,7 @@ salaryCalcRoute.get('/', async (c) => {
             {/* 법적 고지 */}
             <div class="mt-5 flex items-start gap-2 text-xs text-gray-400">
               <i class="fas fa-info-circle mt-0.5 flex-shrink-0"></i>
-              <p>본 계산기는 2026년 기준 참고용이며 실제 급여와 다를 수 있습니다. 소득세는 근로소득 간이세액표 공식 기반 근사값입니다. 정확한 계산은 급여 담당자 또는 세무사에게 문의하세요.</p>
+              <p>본 계산기는 참고용이며 실제 급여와 다를 수 있습니다. 소득세는 근로소득 간이세액표 기반 근사값입니다. 정확한 계산은 급여 담당자 또는 세무사에게 문의하세요.</p>
             </div>
 
           </div>
@@ -217,24 +229,81 @@ salaryCalcRoute.get('/', async (c) => {
       <script dangerouslySetInnerHTML={{ __html: `
 (function () {
   // ════════════════════════════════════════════════════
-  //  2026년 4대보험 요율 상수
+  //  연도별 4대보험 요율 테이블 (매년 1월 1일 기준)
   // ════════════════════════════════════════════════════
-  var RATES = {
-    // 국민연금
-    NP_EMPLOYEE:  0.045,          // 근로자 4.5%
-    NP_EMPLOYER:  0.045,          // 사업주 4.5%
-    NP_MAX_BASE:  6170000,        // 기준소득월액 상한
-    NP_MIN_BASE:  370000,         // 기준소득월액 하한
-
-    // 건강보험
-    HI_EMPLOYEE:  0.03545,        // 근로자 3.545%
-    HI_EMPLOYER:  0.03545,        // 사업주 3.545%
-    LTC_RATE:     0.1295,         // 장기요양: 건강보험료 × 12.95%
-
-    // 고용보험
-    EI_EMPLOYEE:  0.009,          // 근로자 0.9%
-    EI_EMPLOYER:  0.0115,         // 사업주 1.15% (150인 미만)
+  var INSURANCE_RATES = {
+    2025: {
+      NP_EMPLOYEE: 0.045, NP_EMPLOYER: 0.045,
+      NP_MAX_BASE: 5900000, NP_MIN_BASE: 370000,
+      HI_EMPLOYEE: 0.03545, HI_EMPLOYER: 0.03545,
+      LTC_RATE: 0.1295,
+      EI_EMPLOYEE: 0.009, EI_EMPLOYER: 0.0115,
+    },
+    2026: {
+      NP_EMPLOYEE: 0.045, NP_EMPLOYER: 0.045,
+      NP_MAX_BASE: 6370000, NP_MIN_BASE: 390000,
+      HI_EMPLOYEE: 0.03545, HI_EMPLOYER: 0.03545,
+      LTC_RATE: 0.1295,
+      EI_EMPLOYEE: 0.009, EI_EMPLOYER: 0.0115,
+    },
   }
+
+  // ════════════════════════════════════════════════════
+  //  연도별 소득세 간이세액표 (매년 3월 31일 기준 적용)
+  //  bracket: { max, pct, minus } — 과세 월급여 기준, 부양가족 1인(본인만) 기준
+  // ════════════════════════════════════════════════════
+  var TAX_TABLES = {
+    2025: [
+      { max: 1060000,  pct: 0,    minus: 0       },
+      { max: 1500000,  pct: 0.025, minus: 26500  },
+      { max: 3000000,  pct: 0.050, minus: 64000  },
+      { max: 4500000,  pct: 0.150, minus: 364000 },
+      { max: 7000000,  pct: 0.200, minus: 589000 },
+      { max: 10000000, pct: 0.300, minus: 1289000},
+      { max: Infinity, pct: 0.350, minus: 1789000},
+    ],
+    2026: [
+      { max: 1060000,  pct: 0,    minus: 0       },
+      { max: 1500000,  pct: 0.025, minus: 26500  },
+      { max: 3000000,  pct: 0.050, minus: 64000  },
+      { max: 4500000,  pct: 0.150, minus: 364000 },
+      { max: 7000000,  pct: 0.200, minus: 589000 },
+      { max: 10000000, pct: 0.300, minus: 1289000},
+      { max: Infinity, pct: 0.350, minus: 1789000},
+    ],
+  }
+
+  // ════════════════════════════════════════════════════
+  //  적용 연도 결정
+  // ════════════════════════════════════════════════════
+  var today     = new Date()
+  var curYear   = today.getFullYear()
+  var curMonth  = today.getMonth() + 1  // 1-12
+  var curDay    = today.getDate()
+
+  // 4대보험: 1월 1일 기준 → 현재 연도 요율 사용
+  var insYears  = Object.keys(INSURANCE_RATES).map(Number).sort()
+  var insYear   = INSURANCE_RATES[curYear]
+    ? curYear
+    : insYears[insYears.length - 1]  // fallback: 가장 최신 연도
+  var RATES     = INSURANCE_RATES[insYear]
+
+  // 소득세 간이세액표: 3월 31일 이후면 해당 연도, 이전이면 전년도
+  var after331  = curMonth > 3 || (curMonth === 3 && curDay >= 31)
+  var taxYearCandidate = after331 ? curYear : curYear - 1
+  var taxYears  = Object.keys(TAX_TABLES).map(Number).sort()
+  var taxYear   = TAX_TABLES[taxYearCandidate]
+    ? taxYearCandidate
+    : taxYears[taxYears.length - 1]  // fallback: 가장 최신 연도
+  var BRACKETS  = TAX_TABLES[taxYear]
+
+  // ── 배너 & 배지 업데이트 ─────────────────────────
+  document.getElementById('year-badge').textContent = insYear + '년 기준'
+  document.getElementById('ins-basis-text').textContent =
+    insYear + '년 4대보험 요율 적용 중 (기준일: ' + insYear + '.01.01)'
+  document.getElementById('tax-basis-text').textContent =
+    taxYear + '년 원천세 간이세액표 적용 중 (기준일: ' + taxYear + '.03.31)'
+  document.getElementById('basis-banner').classList.remove('hidden')
 
   // ── 이벤트 바인딩 ─────────────────────────────────
   document.getElementById('salary-input').addEventListener('input', calculate)
@@ -253,59 +322,27 @@ salaryCalcRoute.get('/', async (c) => {
   }
 
   // ════════════════════════════════════════════════════
-  //  소득세 계산 (간이세액표 공식 기반)
+  //  소득세 계산 (간이세액표 브래킷 기반)
+  //  - 과세 월급여(taxable)로 브래킷 조회 → 기본세액 산출 (부양가족 1인=본인만)
+  //  - 부양가족 추가 시: 1인당 연 150만원 인적공제 상당액을 브래킷 요율로 월할 공제
   // ════════════════════════════════════════════════════
   function calcIncomeTax(monthlySalary, nonTaxable, dependents) {
-    // 1. 과세 월급여
-    var taxableMonthly = Math.max(0, monthlySalary - nonTaxable)
-    // 2. 연간 과세급여
-    var annual = taxableMonthly * 12
+    var taxable = Math.max(0, monthlySalary - nonTaxable)
 
-    // 3. 근로소득공제
-    var ded
-    if      (annual <= 5000000)   ded = annual * 0.70
-    else if (annual <= 15000000)  ded = 3500000  + (annual - 5000000)   * 0.40
-    else if (annual <= 45000000)  ded = 7500000  + (annual - 15000000)  * 0.15
-    else if (annual <= 100000000) ded = 12000000 + (annual - 45000000)  * 0.05
-    else                          ded = 14750000
-    ded = Math.min(ded, 20000000)  // 한도 2,000만원
+    // 브래킷 조회 (부양가족 1인 = 본인만 기준)
+    var bracket = BRACKETS[BRACKETS.length - 1]
+    for (var i = 0; i < BRACKETS.length; i++) {
+      if (taxable < BRACKETS[i].max) { bracket = BRACKETS[i]; break }
+    }
+    var baseTax = Math.max(0, taxable * bracket.pct - bracket.minus)
 
-    // 4. 근로소득금액
-    var earnedIncome = annual - ded
+    // 추가 부양가족 인적공제: 연 150만원 × 브래킷 요율 / 12 (월할)
+    if (dependents > 0) {
+      var perDep = round10(1500000 * bracket.pct / 12)
+      baseTax = Math.max(0, baseTax - dependents * perDep)
+    }
 
-    // 5. 인적공제 (본인1 + 부양가족)
-    var persons = 1 + dependents
-    var personalDed = persons * 1500000
-
-    // 6. 과세표준
-    var taxBase = Math.max(0, earnedIncome - personalDed)
-
-    // 7. 누진세율 적용
-    var tax
-    if      (taxBase <= 14000000)   tax = taxBase * 0.06
-    else if (taxBase <= 50000000)   tax = 840000    + (taxBase - 14000000)   * 0.15
-    else if (taxBase <= 88000000)   tax = 6240000   + (taxBase - 50000000)   * 0.24
-    else if (taxBase <= 150000000)  tax = 15360000  + (taxBase - 88000000)   * 0.35
-    else if (taxBase <= 300000000)  tax = 37060000  + (taxBase - 150000000)  * 0.38
-    else if (taxBase <= 500000000)  tax = 94060000  + (taxBase - 300000000)  * 0.40
-    else if (taxBase <= 1000000000) tax = 174060000 + (taxBase - 500000000)  * 0.42
-    else                            tax = 384060000 + (taxBase - 1000000000) * 0.45
-
-    // 8. 근로소득세액공제
-    var credit
-    if (tax <= 1300000) credit = tax * 0.55
-    else                credit = 715000 + (tax - 1300000) * 0.30
-
-    // 세액공제 한도
-    var creditLimit
-    if      (annual <= 33000000) creditLimit = 740000
-    else if (annual <= 70000000) creditLimit = Math.max(660000, 740000 - (annual - 33000000) * 0.008)
-    else                         creditLimit = Math.max(500000, 660000 - (annual - 70000000) * 0.5)
-    credit = Math.min(credit, creditLimit)
-
-    // 9. 결정세액 → 월할 (10원 단위 절사)
-    var finalTax = Math.max(0, tax - credit)
-    return round10(finalTax / 12)
+    return round10(baseTax)
   }
 
   // ════════════════════════════════════════════════════
@@ -331,8 +368,8 @@ salaryCalcRoute.get('/', async (c) => {
     // ── 건강보험 ────────────────────────────────────
     var hiEmployee  = round10(salary * RATES.HI_EMPLOYEE)
     var hiEmployer  = round10(salary * RATES.HI_EMPLOYER)
-    // 장기요양 (건강보험료 기준, 근로자/사업주 각 50%)
-    var ltcBase     = (hiEmployee + hiEmployer)   // 건보 합계
+    // 장기요양 (건강보험료 합계 기준, 근로자/사업주 각 50%)
+    var ltcBase     = hiEmployee + hiEmployer
     var ltcEmployee = round10(ltcBase * RATES.LTC_RATE * 0.5)
     var ltcEmployer = round10(ltcBase * RATES.LTC_RATE * 0.5)
 
@@ -354,29 +391,28 @@ salaryCalcRoute.get('/', async (c) => {
     var empRows = [
       ['국민연금', fmtPct(RATES.NP_EMPLOYEE) + (npCapped ? ' (상한 적용)' : ''), npEmployee],
       ['건강보험', fmtPct(RATES.HI_EMPLOYEE), hiEmployee],
-      ['장기요양보험', '건보료 × 12.95% × 50%', ltcEmployee],
+      ['장기요양보험', '건보료 합계 × ' + (RATES.LTC_RATE * 100).toFixed(2) + '% × 50%', ltcEmployee],
       ['고용보험', fmtPct(RATES.EI_EMPLOYEE), eiEmployee],
-      ['소득세', '간이세액표 기준', incomeTax],
+      ['소득세', taxYear + '년 간이세액표 기준', incomeTax],
       ['지방소득세', '소득세 × 10%', localTax],
     ]
-    var empHtml = empRows.map(function(r) {
+    document.getElementById('employee-table').innerHTML = empRows.map(function(r) {
       return '<tr class="border-b border-gray-50 hover:bg-gray-50">' +
         '<td class="px-5 py-2.5 text-gray-700">' + r[0] + '</td>' +
         '<td class="px-5 py-2.5 text-right text-gray-400 text-xs">' + r[1] + '</td>' +
         '<td class="px-5 py-2.5 text-right font-medium text-gray-800">' + fmt(r[2]) + '</td>' +
         '</tr>'
     }).join('')
-    document.getElementById('employee-table').innerHTML = empHtml
 
     // ── 렌더링: 사업주 부담표 ─────────────────────
     var emplRows = [
       ['국민연금', fmtPct(RATES.NP_EMPLOYER) + (npCapped ? ' (상한 적용)' : ''), npEmployer],
       ['건강보험', fmtPct(RATES.HI_EMPLOYER), hiEmployer],
-      ['장기요양보험', '건보료 × 12.95% × 50%', ltcEmployer],
+      ['장기요양보험', '건보료 합계 × ' + (RATES.LTC_RATE * 100).toFixed(2) + '% × 50%', ltcEmployer],
       ['고용보험', fmtPct(RATES.EI_EMPLOYER) + ' (150인 미만)', eiEmployer],
       ['산재보험', '업종별 상이', null],
     ]
-    var emplHtml = emplRows.map(function(r) {
+    document.getElementById('employer-table').innerHTML = emplRows.map(function(r) {
       var amtCell = r[2] !== null
         ? '<td class="px-5 py-2.5 text-right font-medium text-gray-800">' + fmt(r[2]) + '</td>'
         : '<td class="px-5 py-2.5 text-right text-xs text-amber-600 font-medium">별도 확인</td>'
@@ -386,7 +422,6 @@ salaryCalcRoute.get('/', async (c) => {
         amtCell +
         '</tr>'
     }).join('')
-    document.getElementById('employer-table').innerHTML = emplHtml
 
     // ── 렌더링: 실수령액 카드 ─────────────────────
     document.getElementById('net-salary').textContent       = fmt(netSalary)
