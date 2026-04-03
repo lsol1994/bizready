@@ -35,7 +35,7 @@ adminRoute.get('/', async (c) => {
   const db = getSupabaseAdmin(c.env)
 
   const [guidesRes, usersRes, profilesRes, paymentsRes, noticesRes] = await Promise.all([
-    db.from('guides').select('id,title,category,subcategory,summary,is_premium,status,updated_by,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false }),
+    db.from('guides').select('id,title,category,subcategory,summary,is_premium,status,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false }),
     db.auth.admin.listUsers(),
     db.from('user_profiles').select('*'),
     db.from('payment_logs').select('*').order('created_at', { ascending: false }),
@@ -1186,7 +1186,6 @@ adminRoute.post('/guide/:id/update', async (c) => {
     content:     (body.content as string)?.trim(),
     is_premium:  body.is_premium === 'on',
     status:      body.status as string || 'published',
-    updated_by:  auth.user.email,
     updated_at:  new Date().toISOString(),
   }).eq('id', id)
 
@@ -1226,7 +1225,6 @@ adminRoute.post('/api/guides', async (c) => {
     content: body.content.trim(),
     is_premium: body.is_premium ?? false,
     status: body.status || 'published',
-    updated_by: auth.user.email,
     updated_at: new Date().toISOString(),
   }).select('id').single()
   if (error) return c.json({ ok: false, error: error.message }, 500)
@@ -1243,7 +1241,7 @@ adminRoute.put('/api/guides/:id', async (c) => {
   if (body.title !== undefined && !body.title?.trim()) return c.json({ ok: false, error: '제목이 필요합니다' }, 400)
   if (body.content !== undefined && !body.content?.trim()) return c.json({ ok: false, error: '본문이 필요합니다' }, 400)
 
-  const updateData: any = { updated_by: auth.user.email, updated_at: new Date().toISOString() }
+  const updateData: any = { updated_at: new Date().toISOString() }
   if (body.title      !== undefined) updateData.title      = body.title.trim()
   if (body.category   !== undefined) updateData.category   = body.category
   if (body.subcategory !== undefined) updateData.subcategory = body.subcategory
