@@ -35,7 +35,7 @@ adminRoute.get('/', async (c) => {
   const db = getSupabaseAdmin(c.env)
 
   const [guidesRes, usersRes, profilesRes, paymentsRes, noticesRes] = await Promise.all([
-    db.from('guides').select('id,title,category,subcategory,summary,content,is_premium,status,updated_by,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false }),
+    db.from('guides').select('id,title,category,subcategory,summary,is_premium,status,updated_by,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false }),
     db.auth.admin.listUsers(),
     db.from('user_profiles').select('*'),
     db.from('payment_logs').select('*').order('created_at', { ascending: false }),
@@ -43,6 +43,7 @@ adminRoute.get('/', async (c) => {
   ])
 
   const guides         = guidesRes.data ?? []
+  const guidesError    = guidesRes.error ? guidesRes.error.message : null
   const users          = usersRes.data?.users ?? []
   const profiles       = profilesRes.data ?? []
   const payments       = paymentsRes.data ?? []
@@ -370,89 +371,68 @@ adminRoute.get('/', async (c) => {
                 <i class="fas fa-plus"></i>새 가이드 추가
               </button>
             </div>
+            {guidesError && (
+              <div class="mx-6 mt-4 mb-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                가이드 로딩 오류: {guidesError}
+              </div>
+            )}
             <div class="overflow-x-auto">
               {guides.length === 0 ? (
                 <div class="text-center py-16 text-gray-400">
                   <i class="fas fa-book text-4xl mb-3 block text-gray-300"></i>
-                  <p class="font-medium">등록된 가이드가 없습니다</p>
-                  <button onclick="openGuideModal()" class="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                    <i class="fas fa-plus"></i>신규 등록
-                  </button>
+                  <p class="font-medium">{guidesError ? '가이드를 불러오지 못했습니다' : '등록된 가이드가 없습니다'}</p>
+                  {!guidesError && (
+                    <button onclick="openGuideModal()" class="mt-4 inline-flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                      <i class="fas fa-plus"></i>신규 등록
+                    </button>
+                  )}
                 </div>
               ) : (
                 <table class="w-full text-sm">
                   <thead class="bg-gray-50 border-b border-gray-100">
                     <tr>
-                      <th class="text-left px-4 py-3 text-gray-500 font-medium">제목</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium w-12">번호</th>
                       <th class="text-left px-4 py-3 text-gray-500 font-medium">카테고리</th>
-                      <th class="text-center px-4 py-3 text-gray-500 font-medium">상태</th>
+                      <th class="text-left px-4 py-3 text-gray-500 font-medium">제목</th>
                       <th class="text-center px-4 py-3 text-gray-500 font-medium">프리미엄</th>
-                      <th class="text-right px-4 py-3 text-gray-500 font-medium">조회수</th>
-                      <th class="text-left px-4 py-3 text-gray-500 font-medium">최종 수정</th>
-                      <th class="text-center px-4 py-3 text-gray-500 font-medium">관리</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium">상태</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium w-24">수정/삭제</th>
                     </tr>
                   </thead>
                   <tbody id="guide-table-body">
-                    {guides.map((g: any) => (
+                    {guides.map((g: any, idx: number) => (
                       <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors" data-cat={g.category}>
-                        <td class="px-4 py-3">
-                          <div class="font-medium text-gray-800 max-w-xs truncate">{g.title}</div>
-                        </td>
+                        <td class="px-4 py-3 text-center text-gray-400 text-xs">{idx + 1}</td>
                         <td class="px-4 py-3">
                           <span class={`text-xs px-2 py-1 rounded-full font-medium ${catBadge[g.category] ?? 'bg-gray-100 text-gray-600'}`}>
                             {g.category}
                           </span>
                         </td>
-                        <td class="px-4 py-3 text-center">
-                          <button
-                            onclick={`toggleStatus('${g.id}', '${g.status ?? 'published'}')`}
-                            class={`text-xs px-2.5 py-1 rounded-full font-medium cursor-pointer transition-colors ${(g.status ?? 'published') === 'published' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                          >
-                            {(g.status ?? 'published') === 'published' ? '● 발행중' : '○ 임시저장'}
-                          </button>
+                        <td class="px-4 py-3">
+                          <div class="font-medium text-gray-800 max-w-sm truncate">{g.title}</div>
+                          {g.subcategory && <div class="text-xs text-gray-400 mt-0.5">{g.subcategory}</div>}
                         </td>
                         <td class="px-4 py-3 text-center">
-                          <button
-                            onclick={`togglePremium('${g.id}', ${g.is_premium})`}
-                            class={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${g.is_premium ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
-                          >
+                          <span class={`text-xs px-2 py-1 rounded-full font-medium ${g.is_premium ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'}`}>
                             {g.is_premium ? '💎 프리미엄' : '무료'}
-                          </button>
+                          </span>
                         </td>
-                        <td class="px-4 py-3 text-right text-gray-500">{g.view_count ?? 0}</td>
-                        <td class="px-4 py-3 text-xs text-gray-400">
-                          <div>{g.updated_by || '-'}</div>
-                          <div>{g.updated_at ? new Date(g.updated_at).toLocaleDateString('ko-KR') : '-'}</div>
+                        <td class="px-4 py-3 text-center">
+                          <span class={`text-xs px-2.5 py-1 rounded-full font-medium ${(g.status ?? 'published') === 'published' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {(g.status ?? 'published') === 'published' ? '발행중' : '임시저장'}
+                          </span>
                         </td>
                         <td class="px-4 py-3 text-center">
                           <div class="flex items-center justify-center gap-1">
-                            {(g.file_url_1 || g.file_url_2 || g.file_url_3) && (
-                              <span class="text-emerald-500 text-xs" title="첨부파일 있음">
-                                <i class="fas fa-paperclip"></i>
-                                {[g.file_url_1, g.file_url_2, g.file_url_3].filter(Boolean).length}
-                              </span>
-                            )}
                             <button
                               onclick={`editGuide('${g.id}')`}
-                              class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="수정"
-                            >
-                              <i class="fas fa-edit text-xs"></i>
-                            </button>
+                              class="px-2.5 py-1 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium"
+                            >수정</button>
                             <button
-                              onclick={`manageFiles('${g.id}', '${g.title.replace(/'/g, "\\'")}', '${g.file_url_1||''}', '${g.file_name_1||''}', '${g.file_url_2||''}', '${g.file_name_2||''}', '${g.file_url_3||''}', '${g.file_name_3||''}')`}
-                              class="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
-                              title="파일 관리"
-                            >
-                              <i class="fas fa-file-upload text-xs"></i>
-                            </button>
-                            <button
-                              onclick={`deleteGuide('${g.id}', '${g.title.replace(/'/g, "\\'")}')`}
-                              class="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                              title="삭제"
-                            >
-                              <i class="fas fa-trash text-xs"></i>
-                            </button>
+                              onclick={`deleteGuide('${g.id}', '${g.title.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')`}
+                              class="px-2.5 py-1 text-xs text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors font-medium"
+                            >삭제</button>
                           </div>
                         </td>
                       </tr>
@@ -743,7 +723,6 @@ create policy "authenticated users can read public announcements"
 
       {/* ══ 파일 관리 스크립트 ══ */}
       <script dangerouslySetInnerHTML={{ __html: `
-        var GUIDES_DATA = ${JSON.stringify(Object.fromEntries(guides.map((g: any) => [g.id, g])))};
         let _fileGuideId = ''
         function manageFiles(guideId, title, u1, n1, u2, n2, u3, n3) {
           _fileGuideId = guideId
@@ -962,22 +941,33 @@ create policy "authenticated users can read public announcements"
         function closeGuideModal() {
           document.getElementById('guide-modal').classList.add('hidden')
         }
-        function editGuide(id) {
-          var g = GUIDES_DATA[id]
-          if (!g) { alert('가이드 데이터를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.'); return }
-          document.getElementById('guide-id').value = g.id
-          document.getElementById('modal-title').textContent = '가이드 수정'
-          document.getElementById('guide-title').value = g.title || ''
-          document.getElementById('guide-category').value = g.category || '세무회계'
-          updateSubcategory(g.subcategory || '')
-          document.getElementById('guide-status').value = g.status || 'published'
-          document.getElementById('guide-summary').value = g.summary || ''
-          document.getElementById('guide-content').value = g.content || ''
-          document.getElementById('guide-premium').checked = !!g.is_premium
-          document.getElementById('modal-error').classList.add('hidden')
-          pendingFiles = {}
-          for (var s = 1; s <= 3; s++) clearFileSlot(s)
+        async function editGuide(id) {
+          var errEl = document.getElementById('modal-error')
+          document.getElementById('guide-id').value = ''
+          document.getElementById('modal-title').textContent = '가이드 불러오는 중...'
           document.getElementById('guide-modal').classList.remove('hidden')
+          errEl.classList.add('hidden')
+          try {
+            var res = await fetch('/admin/api/guides/' + id)
+            var data = await res.json()
+            if (!data.ok) throw new Error(data.error || '알 수 없는 오류')
+            var g = data.guide
+            document.getElementById('guide-id').value = g.id
+            document.getElementById('modal-title').textContent = '가이드 수정'
+            document.getElementById('guide-title').value = g.title || ''
+            document.getElementById('guide-category').value = g.category || '세무회계'
+            updateSubcategory(g.subcategory || '')
+            document.getElementById('guide-status').value = g.status || 'published'
+            document.getElementById('guide-summary').value = g.summary || ''
+            document.getElementById('guide-content').value = g.content || ''
+            document.getElementById('guide-premium').checked = !!g.is_premium
+            pendingFiles = {}
+            for (var s = 1; s <= 3; s++) clearFileSlot(s)
+          } catch(e) {
+            errEl.textContent = '❌ 가이드를 불러올 수 없습니다: ' + e.message
+            errEl.classList.remove('hidden')
+            document.getElementById('modal-title').textContent = '오류'
+          }
         }
         async function saveGuide() {
           var title   = document.getElementById('guide-title').value.trim()
@@ -1161,6 +1151,59 @@ create policy "authenticated users can read public announcements"
     </div>,
     { title: '관리자 | BizReady' }
   )
+})
+
+// ═══════════════════════════════════════════════════════════
+//  API: 가이드 단건 조회
+// ═══════════════════════════════════════════════════════════
+adminRoute.get('/api/guides/:id', async (c) => {
+  const auth = await requireAdmin(c)
+  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  const id = c.req.param('id')
+  const db = getSupabaseAdmin(c.env)
+  const { data, error } = await db.from('guides').select('*').eq('id', id).single()
+  if (error) return c.json({ ok: false, error: error.message }, 500)
+  return c.json({ ok: true, guide: data })
+})
+
+// ═══════════════════════════════════════════════════════════
+//  POST 폼 라우트: 가이드 수정 / 삭제 (form submit 방식)
+// ═══════════════════════════════════════════════════════════
+adminRoute.post('/guide/:id/update', async (c) => {
+  const auth = await requireAdmin(c)
+  if (!auth) return c.redirect('/login?error=unauthorized')
+
+  const id   = c.req.param('id')
+  const body = await c.req.parseBody()
+
+  const db = getSupabaseAdmin(c.env)
+  const { error } = await db.from('guides').update({
+    title:       (body.title as string)?.trim(),
+    category:    body.category as string,
+    subcategory: body.subcategory as string || '',
+    summary:     (body.summary as string)?.trim() || '',
+    content:     (body.content as string)?.trim(),
+    is_premium:  body.is_premium === 'on',
+    status:      body.status as string || 'published',
+    updated_by:  auth.user.email,
+    updated_at:  new Date().toISOString(),
+  }).eq('id', id)
+
+  if (error) return c.redirect(`/admin?tab=guides&error=${encodeURIComponent(error.message)}`)
+  return c.redirect('/admin?tab=guides&success=updated')
+})
+
+adminRoute.post('/guide/:id/delete', async (c) => {
+  const auth = await requireAdmin(c)
+  if (!auth) return c.redirect('/login?error=unauthorized')
+
+  const id = c.req.param('id')
+  const db = getSupabaseAdmin(c.env)
+  const { error } = await db.from('guides').delete().eq('id', id)
+
+  if (error) return c.redirect(`/admin?tab=guides&error=${encodeURIComponent(error.message)}`)
+  return c.redirect('/admin?tab=guides&success=deleted')
 })
 
 // ═══════════════════════════════════════════════════════════
