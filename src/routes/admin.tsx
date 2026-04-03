@@ -1292,13 +1292,13 @@ adminRoute.put('/api/users/:id/plan', async (c) => {
   const body = await c.req.json<{ is_paid: boolean }>()
 
   const db = getSupabaseAdmin(c.env)
-  const { error } = await db.from('user_profiles').update({
-    is_paid:    body.is_paid,
-    plan_type:  body.is_paid ? 'manual' : 'free',
-    paid_at:    body.is_paid ? new Date().toISOString() : null,
-    updated_by: auth.user.email,
-    updated_at: new Date().toISOString(),
-  }).eq('id', userId)
+  const updatePayload: Record<string, any> = {
+    is_paid:   body.is_paid,
+    plan_type: body.is_paid ? 'premium' : 'free',
+  }
+  if (body.is_paid) updatePayload.paid_at = new Date().toISOString()
+
+  const { error } = await db.from('user_profiles').update(updatePayload).eq('id', userId)
 
   if (error) return c.json({ ok: false, error: error.message }, 500)
   return c.json({ ok: true })
