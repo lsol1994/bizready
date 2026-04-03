@@ -7,6 +7,7 @@ import { parseSessionCookie } from '../lib/session'
 import { getSupabaseClientWithToken } from '../lib/supabase'
 import { Sidebar, MobileMenuButton } from '../lib/sidebar'
 import type { Env } from '../lib/supabase'
+import { TAX_TABLE_2026 } from '../lib/tax-table-2026'
 
 const salaryCalcRoute = new Hono<{ Bindings: Env }>()
 salaryCalcRoute.use(renderer)
@@ -228,6 +229,8 @@ salaryCalcRoute.get('/', async (c) => {
 
       <script dangerouslySetInnerHTML={{ __html: `
 (function () {
+  var TAX_TABLE_2026 = ${JSON.stringify(TAX_TABLE_2026)};
+
   // ════════════════════════════════════════════════════
   //  연도별 4대보험 요율 테이블 (매년 1월 1일 기준)
   // ════════════════════════════════════════════════════
@@ -322,27 +325,27 @@ salaryCalcRoute.get('/', async (c) => {
   }
 
   // ════════════════════════════════════════════════════
-  //  소득세 계산 (간이세액표 브래킷 기반)
-  //  - 과세 월급여(taxable)로 브래킷 조회 → 기본세액 산출 (부양가족 1인=본인만)
-  //  - 부양가족 추가 시: 1인당 연 150만원 인적공제 상당액을 브래킷 요율로 월할 공제
+  //  소득세 계산 (2026 근로소득 간이세액표 기반)
   // ════════════════════════════════════════════════════
-  function calcIncomeTax(monthlySalary, nonTaxable, dependents) {
-    var taxable = Math.max(0, monthlySalary - nonTaxable)
-
-    // 브래킷 조회 (부양가족 1인 = 본인만 기준)
-    var bracket = BRACKETS[BRACKETS.length - 1]
-    for (var i = 0; i < BRACKETS.length; i++) {
-      if (taxable < BRACKETS[i].max) { bracket = BRACKETS[i]; break }
+  function getIncomeTax(taxableSalary, familyCount, childCount) {
+    var salaryK = Math.floor(taxableSalary / 1000);
+    var fc = Math.min(Math.max(familyCount, 1), 11);
+    var tax = 0;
+    for (var i = 0; i < TAX_TABLE_2026.length; i++) {
+      var row = TAX_TABLE_2026[i];
+      if (salaryK >= row[0] && salaryK < row[1]) {
+        tax = row[fc + 1];
+        break;
+      }
     }
-    var baseTax = Math.max(0, taxable * bracket.pct - bracket.minus)
-
-    // 추가 부양가족 인적공제: 연 150만원 × 브래킷 요율 / 12 (월할)
-    if (dependents > 0) {
-      var perDep = round10(1500000 * bracket.pct / 12)
-      baseTax = Math.max(0, baseTax - dependents * perDep)
+    if (childCount >= 1) {
+      var childDeduction = 0;
+      if (childCount === 1) childDeduction = 20830;
+      else if (childCount === 2) childDeduction = 45830;
+      else childDeduction = 45830 + (childCount - 2) * 33330;
+      tax = Math.max(0, tax - childDeduction);
     }
-
-    return round10(baseTax)
+    return tax;
   }
 
   // ════════════════════════════════════════════════════
@@ -378,7 +381,7 @@ salaryCalcRoute.get('/', async (c) => {
     var eiEmployer = round10(salary * RATES.EI_EMPLOYER)
 
     // ── 소득세 / 지방소득세 ─────────────────────────
-    var incomeTax   = calcIncomeTax(salary, nonTaxable, dependents)
+    var incomeTax   = getIncomeTax(Math.max(0, salary - nonTaxable), 1 + dependents, 0)
     var localTax    = round10(incomeTax * 0.10)
 
     // ── 합계 ────────────────────────────────────────
