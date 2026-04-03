@@ -433,7 +433,7 @@ adminRoute.get('/', async (c) => {
                               </span>
                             )}
                             <button
-                              onclick={`editGuide(${JSON.stringify(g).replace(/"/g, '&quot;')})`}
+                              onclick={`editGuide('${g.id}')`}
                               class="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                               title="수정"
                             >
@@ -743,6 +743,7 @@ create policy "authenticated users can read public announcements"
 
       {/* ══ 파일 관리 스크립트 ══ */}
       <script dangerouslySetInnerHTML={{ __html: `
+        var GUIDES_DATA = ${JSON.stringify(Object.fromEntries(guides.map((g: any) => [g.id, g])))};
         let _fileGuideId = ''
         function manageFiles(guideId, title, u1, n1, u2, n2, u3, n3) {
           _fileGuideId = guideId
@@ -961,7 +962,9 @@ create policy "authenticated users can read public announcements"
         function closeGuideModal() {
           document.getElementById('guide-modal').classList.add('hidden')
         }
-        function editGuide(g) {
+        function editGuide(id) {
+          var g = GUIDES_DATA[id]
+          if (!g) { alert('가이드 데이터를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.'); return }
           document.getElementById('guide-id').value = g.id
           document.getElementById('modal-title').textContent = '가이드 수정'
           document.getElementById('guide-title').value = g.title || ''
