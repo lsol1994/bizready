@@ -395,6 +395,7 @@ adminRoute.get('/', async (c) => {
                       <th class="text-center px-4 py-3 text-gray-500 font-medium w-12">번호</th>
                       <th class="text-left px-4 py-3 text-gray-500 font-medium">카테고리</th>
                       <th class="text-left px-4 py-3 text-gray-500 font-medium">제목</th>
+                      <th class="text-center px-4 py-3 text-gray-500 font-medium w-20">첨부파일</th>
                       <th class="text-center px-4 py-3 text-gray-500 font-medium">프리미엄</th>
                       <th class="text-center px-4 py-3 text-gray-500 font-medium">상태</th>
                       <th class="text-center px-4 py-3 text-gray-500 font-medium w-24">수정/삭제</th>
@@ -412,6 +413,12 @@ adminRoute.get('/', async (c) => {
                         <td class="px-4 py-3">
                           <div class="font-medium text-gray-800 max-w-sm truncate">{g.title}</div>
                           {g.subcategory && <div class="text-xs text-gray-400 mt-0.5">{g.subcategory}</div>}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                          {(g.file_url_1 || g.file_url_2 || g.file_url_3)
+                            ? <span class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700"><i class="fas fa-paperclip"></i>있음</span>
+                            : <span class="text-gray-300 text-xs">-</span>
+                          }
                         </td>
                         <td class="px-4 py-3 text-center">
                           <span class={`text-xs px-2 py-1 rounded-full font-medium ${g.is_premium ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-400'}`}>
