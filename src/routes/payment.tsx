@@ -153,6 +153,13 @@ payment.get('/', async (c) => {
                         <i class="fas fa-credit-card"></i>
                         토스페이먼츠로 결제
                       </button>
+                      <button
+                        onclick={`requestPayment('card', '${plan.id}', ${plan.price}, '${plan.name}')`}
+                        class="w-full py-3 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+                      >
+                        <i class="fas fa-credit-card text-gray-500"></i>
+                        신용/체크카드 결제
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -233,17 +240,15 @@ async function requestPayment(method, planId, amount, planName) {
   const channelKey = method === 'kakaopay' ? CHANNEL_KEY_KAKAO : CHANNEL_KEY_TOSS
 
   try {
-    const response = await PortOne.requestPayment({
+    const paymentOptions = {
       storeId: STORE_ID,
       channelKey: channelKey,
       paymentId: paymentId,
       orderName: 'BizReady ' + planName,
       totalAmount: amount,
       currency: 'KRW',
-      payMethod: method === 'kakaopay' ? 'EASY_PAY' : 'EASY_PAY',
-      easyPay: {
-        easyPayProvider: method === 'kakaopay' ? 'KAKAOPAY' : 'TOSSPAY',
-      },
+      payMethod: method === 'card' ? 'CARD' : 'EASY_PAY',
+      ...(method !== 'card' && { easyPay: { easyPayProvider: method === 'kakaopay' ? 'KAKAOPAY' : 'TOSSPAY' } }),
       customer: {
         customerId: USER_ID,
         fullName: USER_NAME,
@@ -253,7 +258,9 @@ async function requestPayment(method, planId, amount, planName) {
         userId: USER_ID,
         planId: planId,
       },
-    })
+    }
+
+    const response = await PortOne.requestPayment(paymentOptions)
 
     if (response.code !== undefined) {
       // 결제 실패 or 취소
