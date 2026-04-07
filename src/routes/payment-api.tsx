@@ -66,8 +66,8 @@ paymentApi.post('/complete', async (c) => {
 
     // 6. 금액 검증 (위변조 방지)
     const expectedAmounts: Record<string, number> = {
-      monthly: 9900,
-      yearly: 79000,
+      monthly: 14900,
+      yearly: 119000,
     }
     const expectedAmount = expectedAmounts[planId]
     if (!expectedAmount) {
@@ -113,6 +113,35 @@ paymentApi.post('/complete', async (c) => {
     console.error('Payment complete error:', err)
     return c.json({ ok: false, error: err.message }, 500)
   }
+})
+
+// ── POST /api/payment/cancel ──────────────────────────────
+// 구독 취소 → user_profiles 즉시 무료 전환
+paymentApi.post('/cancel', async (c) => {
+  const cookie = c.req.header('Cookie') ?? ''
+  const sessionStr = parseSessionCookie(cookie)
+  if (!sessionStr) return c.json({ ok: false, error: 'unauthorized' }, 401)
+
+  let userId = ''
+  try {
+    const sessionObj = JSON.parse(decodeURIComponent(sessionStr))
+    const supabase = getSupabaseClientWithToken(c.env, sessionObj.access_token)
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) return c.json({ ok: false, error: 'session_expired' }, 401)
+    userId = user.id
+  } catch {
+    return c.json({ ok: false, error: 'session_invalid' }, 401)
+  }
+
+  const db = getSupabaseAdmin(c.env)
+  const { error } = await db.from('user_profiles').update({
+    is_paid: false,
+    plan_type: 'free',
+    paid_at: null,
+  }).eq('id', userId)
+
+  if (error) return c.json({ ok: false, error: error.message }, 500)
+  return c.json({ ok: true })
 })
 
 export default paymentApi

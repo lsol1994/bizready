@@ -13,8 +13,8 @@ const PLANS = [
   {
     id: 'monthly',
     name: '월간 구독',
-    price: 9900,
-    priceLabel: '9,900원',
+    price: 14900,
+    priceLabel: '14,900원',
     period: '/ 월',
     desc: '매월 자동 갱신',
     features: ['모든 업무 가이드 열람', '키워드 검색 무제한', '개인 메모·북마크', '월 1회 콘텐츠 업데이트'],
@@ -24,10 +24,10 @@ const PLANS = [
   {
     id: 'yearly',
     name: '연간 구독',
-    price: 79000,
-    priceLabel: '79,000원',
+    price: 119000,
+    priceLabel: '119,000원',
     period: '/ 년',
-    desc: '월 6,583원 (33% 절약)',
+    desc: '월 9,917원 (33% 절약)',
     features: ['모든 업무 가이드 열람', '키워드 검색 무제한', '개인 메모·북마크', '월 1회 콘텐츠 업데이트', '우선 고객 지원', '신규 가이드 즉시 알림'],
     badge: '인기',
     highlight: true,
@@ -91,9 +91,16 @@ payment.get('/', async (c) => {
               <div class="text-5xl mb-4">💎</div>
               <h2 class="text-2xl font-bold text-green-800 mb-2">프리미엄 구독 중</h2>
               <p class="text-green-600 mb-6">모든 콘텐츠를 자유롭게 이용하실 수 있습니다.</p>
-              <a href="/dashboard/archive" class="bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors inline-block">
-                아카이브 보러가기 →
-              </a>
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="/dashboard/archive" class="bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors inline-block">
+                  아카이브 보러가기 →
+                </a>
+                <button onclick="cancelSubscription()"
+                  class="border border-gray-300 text-gray-500 px-6 py-3 rounded-xl font-medium hover:bg-gray-50 hover:text-red-500 hover:border-red-300 transition-colors text-sm">
+                  구독 취소
+                </button>
+              </div>
+              <div id="cancel-msg" class="hidden mt-4 text-sm font-medium"></div>
             </div>
           ) : (
             <div>
@@ -181,6 +188,35 @@ const USER_NAME  = '${userName}'
 const STORE_ID   = '${c.env.PORTONE_V2_STORE_ID}'
 const CHANNEL_KEY_KAKAO = '${c.env.PORTONE_V2_CHANNEL_KEY_KAKAO}'
 const CHANNEL_KEY_TOSS  = '${c.env.PORTONE_V2_CHANNEL_KEY_TOSS}'
+
+async function cancelSubscription() {
+  if (!confirm('정말 구독을 취소하시겠습니까?\\n취소 후 즉시 무료 플랜으로 변경됩니다.')) return
+  const msg = document.getElementById('cancel-msg')
+  try {
+    const res = await fetch('/api/payment/cancel', { method: 'POST' })
+    const data = await res.json()
+    if (data.ok) {
+      if (msg) {
+        msg.classList.remove('hidden')
+        msg.className = 'mt-4 text-sm font-medium text-green-600'
+        msg.textContent = '구독이 취소되었습니다.'
+      }
+      setTimeout(function() { location.reload() }, 1200)
+    } else {
+      if (msg) {
+        msg.classList.remove('hidden')
+        msg.className = 'mt-4 text-sm font-medium text-red-500'
+        msg.textContent = '취소 실패: ' + (data.error || '알 수 없는 오류')
+      }
+    }
+  } catch (err) {
+    if (msg) {
+      msg.classList.remove('hidden')
+      msg.className = 'mt-4 text-sm font-medium text-red-500'
+      msg.textContent = '오류: ' + err.message
+    }
+  }
+}
 
 async function requestPayment(method, planId, amount, planName) {
   const overlay = document.getElementById('payment-overlay')
