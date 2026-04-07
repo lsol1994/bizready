@@ -185,6 +185,7 @@ guide.get('/:id', async (c) => {
   let userInitial = 'U'
   let userId = ''
   let isPaid = false
+  let isAdmin = false
 
   try {
     let sessionObj: any
@@ -199,6 +200,7 @@ guide.get('/:id', async (c) => {
     userName = (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || '사용자'
     userInitial = userName.charAt(0).toUpperCase()
     userId = user.id
+    isAdmin = user.email === c.env.ADMIN_EMAIL
 
     const { data: profile } = await supabase
       .from('user_profiles').select('is_paid').eq('id', user.id).single()
@@ -335,6 +337,61 @@ guide.get('/:id', async (c) => {
                   )}
                 </div>
               </div>
+
+              {/* ── 관리자 수정 패널 ── */}
+              {isAdmin && (
+                <div id="admin-edit-panel" class="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+                  <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-amber-800 text-sm flex items-center gap-2">
+                      <i class="fas fa-tools"></i> 관리자 수정 패널
+                    </h3>
+                    <button onclick="toggleAdminPanel()" id="admin-panel-toggle" class="text-xs text-amber-600 hover:text-amber-800 border border-amber-300 px-3 py-1 rounded-lg">접기</button>
+                  </div>
+                  <div id="admin-panel-body" class="space-y-4">
+                    <div>
+                      <label class="block text-xs font-medium text-amber-700 mb-1">제목</label>
+                      <input id="admin-title" type="text" value={guideData.title}
+                        class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-medium text-amber-700 mb-1">카테고리</label>
+                        <select id="admin-category" onchange="adminUpdateSubcategory()" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
+                          <option value="세무/회계" selected={guideData.category === '세무/회계'}>세무/회계</option>
+                          <option value="인사/노무" selected={guideData.category === '인사/노무'}>인사/노무</option>
+                          <option value="총무" selected={guideData.category === '총무'}>총무</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-medium text-amber-700 mb-1">서브카테고리</label>
+                        <select id="admin-subcategory" class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
+                          <option value="">선택 안함</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-amber-700 mb-1">요약</label>
+                      <input id="admin-summary" type="text" value={guideData.summary ?? ''}
+                        class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-amber-700 mb-1">본문 (Markdown)</label>
+                      <textarea id="admin-content" rows={12}
+                        class="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white resize-none"
+                      >{guideData.content ?? ''}</textarea>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input id="admin-premium" type="checkbox" class="w-4 h-4 text-amber-600 rounded" checked={guideData.is_premium} />
+                      <label class="text-sm font-medium text-amber-700">💎 프리미엄 가이드</label>
+                    </div>
+                    <div id="admin-save-msg" class="hidden text-xs font-medium"></div>
+                    <button onclick="adminSaveGuide()" id="admin-save-btn"
+                      class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors flex items-center gap-2">
+                      <i class="fas fa-save"></i> 저장
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* ── 실무 양식 다운로드 섹션 ── */}
               {hasAttachments && (
@@ -488,6 +545,84 @@ const SUPABASE_URL = '${c.env.SUPABASE_URL}'
 const SUPABASE_ANON_KEY = '${c.env.SUPABASE_ANON_KEY}'
 const GUIDE_ID = '${guideData.id}'
 const USER_ID = '${userId}'
+const IS_ADMIN = ${isAdmin}
+
+// ── 관리자 패널 ──────────────────────────────────────────
+var ADMIN_SUB_CATS = {
+  '세무/회계': ['부가가치세','종합소득세','원천세','법인세','기타세무'],
+  '인사/노무': ['근로계약','4대보험','급여/퇴직금','연차/휴가','노무관리'],
+  '총무':      ['계약/문서','법인관리','시설/비품','기타총무'],
+}
+function adminUpdateSubcategory() {
+  var cat = document.getElementById('admin-category').value
+  var sel = document.getElementById('admin-subcategory')
+  var prev = sel.value
+  sel.innerHTML = '<option value="">선택 안함</option>'
+  var subs = ADMIN_SUB_CATS[cat] || []
+  subs.forEach(function(s) {
+    var o = document.createElement('option')
+    o.value = s; o.textContent = s
+    if (s === prev) o.selected = true
+    sel.appendChild(o)
+  })
+}
+function toggleAdminPanel() {
+  var body = document.getElementById('admin-panel-body')
+  var btn  = document.getElementById('admin-panel-toggle')
+  var hidden = body.classList.toggle('hidden')
+  btn.textContent = hidden ? '펼치기' : '접기'
+}
+async function adminSaveGuide() {
+  var btn = document.getElementById('admin-save-btn')
+  var msg = document.getElementById('admin-save-msg')
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...'
+  btn.disabled = true
+  msg.classList.add('hidden')
+  try {
+    var payload = {
+      title:      document.getElementById('admin-title').value.trim(),
+      category:   document.getElementById('admin-category').value,
+      subcategory: document.getElementById('admin-subcategory').value,
+      summary:    document.getElementById('admin-summary').value.trim(),
+      content:    document.getElementById('admin-content').value.trim(),
+      is_premium: document.getElementById('admin-premium').checked,
+    }
+    var res  = await fetch('/admin/api/guides/' + GUIDE_ID, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    var data = await res.json()
+    msg.classList.remove('hidden')
+    if (data.ok) {
+      msg.className = 'text-xs font-medium text-green-600'
+      msg.textContent = '✅ 저장되었습니다! 페이지를 새로고침합니다...'
+      setTimeout(function() { location.reload() }, 1200)
+    } else {
+      msg.className = 'text-xs font-medium text-red-600'
+      msg.textContent = '❌ 저장 실패: ' + (data.error || '알 수 없는 오류')
+      btn.innerHTML = '<i class="fas fa-save"></i> 저장'
+      btn.disabled = false
+    }
+  } catch(e) {
+    msg.classList.remove('hidden')
+    msg.className = 'text-xs font-medium text-red-600'
+    msg.textContent = '❌ 오류: ' + e.message
+    btn.innerHTML = '<i class="fas fa-save"></i> 저장'
+    btn.disabled = false
+  }
+}
+if (IS_ADMIN) {
+  adminUpdateSubcategory()
+  // 현재 서브카테고리 선택
+  var adminSubSel = document.getElementById('admin-subcategory')
+  if (adminSubSel) {
+    var curSub = '${(guideData.subcategory ?? '').replace(/'/g, "\\'")}'
+    for (var i = 0; i < adminSubSel.options.length; i++) {
+      if (adminSubSel.options[i].value === curSub) { adminSubSel.selectedIndex = i; break }
+    }
+  }
+}
 let isBookmarked = ${guideData._is_bookmarked ?? false}
 let isLiked = ${guideData._is_liked ?? false}
 

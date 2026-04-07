@@ -568,12 +568,9 @@ create policy "authenticated users can read public announcements"
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
                 <select id="guide-category" onchange="updateSubcategory()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="세무회계">세무회계</option>
-                  <option value="인사노무">인사노무</option>
+                  <option value="세무/회계">세무/회계</option>
+                  <option value="인사/노무">인사/노무</option>
                   <option value="총무">총무</option>
-                  <option value="회계·세무">회계·세무</option>
-                  <option value="인사·노무">인사·노무</option>
-                  <option value="총무·행정">총무·행정</option>
                 </select>
               </div>
               <div>
@@ -853,12 +850,9 @@ create policy "authenticated users can read public announcements"
 
         // ── 서브카테고리 동적 업데이트 ───────────────────────
         var SUB_CATS = {
-          '세무회계':  ['전표/결산','부가세','법인세','원천세/연말정산','자금관리'],
-          '인사노무':  ['채용/퇴사','급여/4대보험','근태/연차','근로계약/사규','성과평가'],
-          '총무':      ['자산/시설','법무/인장','복리후생','구매관리'],
-          '회계·세무': ['전표/결산','부가세','법인세','원천세/연말정산','자금관리'],
-          '인사·노무': ['채용/퇴사','급여/4대보험','근태/연차','근로계약/사규','성과평가'],
-          '총무·행정': ['자산/시설','법무/인장','복리후생','구매관리'],
+          '세무/회계': ['부가가치세','종합소득세','원천세','법인세','기타세무'],
+          '인사/노무': ['근로계약','4대보험','급여/퇴직금','연차/휴가','노무관리'],
+          '총무':      ['계약/문서','법인관리','시설/비품','기타총무'],
         }
         function updateSubcategory(selectedValue) {
           var cat = document.getElementById('guide-category').value
@@ -925,7 +919,7 @@ create policy "authenticated users can read public announcements"
           document.getElementById('guide-id').value = ''
           document.getElementById('modal-title').textContent = '새 가이드 추가'
           document.getElementById('guide-title').value = ''
-          document.getElementById('guide-category').value = '세무회계'
+          document.getElementById('guide-category').value = '세무/회계'
           updateSubcategory('')
           document.getElementById('guide-status').value = 'published'
           document.getElementById('guide-summary').value = ''
