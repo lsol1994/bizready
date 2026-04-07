@@ -186,6 +186,7 @@ guide.get('/:id', async (c) => {
   let userId = ''
   let isPaid = false
   let isAdmin = false
+  let guideCount: number | null = null
 
   try {
     let sessionObj: any
@@ -211,43 +212,53 @@ guide.get('/:id', async (c) => {
 
     if (error || !data) return c.redirect('/dashboard/archive')
 
-    if (data.is_premium && !isPaid) {
-      return c.redirect('/dashboard/archive#upgrade')
-    }
-
     guideData = data
+
+    const canViewFull = isPaid || !data.is_premium || isAdmin
 
     // 조회수 증가
     await supabase.from('guides')
       .update({ view_count: (data.view_count ?? 0) + 1 })
       .eq('id', guideId)
 
-    // 내 좋아요 여부 조회
-    const { data: likeData } = await supabase
-      .from('guide_likes')
-      .select('id')
-      .eq('guide_id', guideId)
-      .eq('user_id', user.id)
-      .maybeSingle()
-    guideData._is_liked = !!likeData
+    if (canViewFull) {
+      // 내 좋아요 여부 조회
+      const { data: likeData } = await supabase
+        .from('guide_likes')
+        .select('id')
+        .eq('guide_id', guideId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      guideData._is_liked = !!likeData
 
-    // 북마크 여부 조회 (bookmarks 테이블)
-    const { data: bookmarkData } = await supabase
-      .from('bookmarks')
-      .select('id')
-      .eq('guide_id', guideId)
-      .eq('user_id', user.id)
-      .maybeSingle()
-    guideData._is_bookmarked = !!bookmarkData
+      // 북마크 여부 조회 (bookmarks 테이블)
+      const { data: bookmarkData } = await supabase
+        .from('bookmarks')
+        .select('id')
+        .eq('guide_id', guideId)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      guideData._is_bookmarked = !!bookmarkData
 
-    const { data: noteData } = await supabase
-      .from('user_notes').select('*').eq('user_id', user.id).eq('guide_id', guideId).single()
-    userNote = noteData
+      const { data: noteData } = await supabase
+        .from('user_notes').select('*').eq('user_id', user.id).eq('guide_id', guideId).single()
+      userNote = noteData
+    } else {
+      // 미리보기 모드: 가이드 수 조회
+      const db = getSupabaseAdmin(c.env)
+      const { count } = await db.from('guides')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'published')
+      guideCount = count
+    }
   } catch {
     return c.redirect('/login?error=session_expired')
   }
 
-  const contentHtml = markdownToHtml(guideData.content)
+  const canViewFull = isPaid || !guideData.is_premium || isAdmin
+  const contentHtml = canViewFull ? markdownToHtml(guideData.content) : ''
+  const previewHtml = canViewFull ? '' : markdownToHtml(guideData.content.slice(0, 300))
+  const guideCountLabel = guideCount !== null ? `${guideCount}개 전문 가이드` : '다양한 전문 가이드'
 
   // 첨부 파일 목록 구성
   const attachments: Array<{ slot: number; url: string; name: string }> = []
@@ -433,23 +444,75 @@ guide.get('/:id', async (c) => {
               )}
 
               {/* 본문 */}
-              <div class="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
-                <div
-                  class="prose-bizready text-gray-700 leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: contentHtml }}
-                />
-                {/* 태그 */}
-                {guideData.tags && (guideData.tags as string[]).length > 0 && (
-                  <div class="flex flex-wrap gap-2 mt-8 pt-6 border-t border-gray-100">
-                    {(guideData.tags as string[]).map((tag: string) => (
-                      <a href={`/dashboard/search?q=${encodeURIComponent(tag)}`}
-                         class="text-xs bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 px-3 py-1 rounded-full transition-colors">
-                        #{tag}
-                      </a>
-                    ))}
+              {canViewFull ? (
+                <div class="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
+                  <div
+                    class="prose-bizready text-gray-700 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: contentHtml }}
+                  />
+                  {/* 태그 */}
+                  {guideData.tags && (guideData.tags as string[]).length > 0 && (
+                    <div class="flex flex-wrap gap-2 mt-8 pt-6 border-t border-gray-100">
+                      {(guideData.tags as string[]).map((tag: string) => (
+                        <a href={`/dashboard/search?q=${encodeURIComponent(tag)}`}
+                           class="text-xs bg-gray-100 hover:bg-blue-100 hover:text-blue-700 text-gray-500 px-3 py-1 rounded-full transition-colors">
+                          #{tag}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* 미리보기 본문 */}
+                  <div class="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm relative">
+                    <div
+                      class="prose-bizready text-gray-700 leading-relaxed preview-fade"
+                      dangerouslySetInnerHTML={{ __html: previewHtml }}
+                    />
                   </div>
-                )}
-              </div>
+
+                  {/* 구독 유도 카드 */}
+                  <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 shadow-lg text-white">
+                    <div class="flex flex-col items-center text-center gap-4">
+                      <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <i class="fas fa-lock text-2xl text-white"></i>
+                      </div>
+                      <div>
+                        <h3 class="text-xl font-bold mb-2">프리미엄 전용 콘텐츠입니다</h3>
+                        <p class="text-blue-100 text-sm leading-relaxed">
+                          이 가이드의 전체 내용은 프리미엄 회원만 이용할 수 있습니다.<br />
+                          지금 구독하고 {guideCountLabel}를 모두 확인하세요.
+                        </p>
+                      </div>
+                      <ul class="text-sm text-left space-y-2 w-full max-w-xs">
+                        <li class="flex items-center gap-2 text-blue-100">
+                          <i class="fas fa-check-circle text-emerald-300 flex-shrink-0"></i>
+                          세무/회계/노무 전문 가이드 전체 무제한 열람
+                        </li>
+                        <li class="flex items-center gap-2 text-blue-100">
+                          <i class="fas fa-check-circle text-emerald-300 flex-shrink-0"></i>
+                          첨부 서식 파일 다운로드
+                        </li>
+                        <li class="flex items-center gap-2 text-blue-100">
+                          <i class="fas fa-check-circle text-emerald-300 flex-shrink-0"></i>
+                          신규 가이드 우선 제공
+                        </li>
+                      </ul>
+                      <div class="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+                        <a href="/dashboard/payment"
+                           class="flex-1 bg-white text-blue-700 font-bold text-sm py-3 px-5 rounded-xl hover:bg-blue-50 transition-colors text-center">
+                          프리미엄 구독하기
+                        </a>
+                        <a href="/dashboard/archive"
+                           class="flex-1 border border-white/50 text-white font-medium text-sm py-3 px-5 rounded-xl hover:bg-white/10 transition-colors text-center">
+                          무료 가이드 보기
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* 법령 안내 (인사노무 카테고리) */}
               {(guideData.category === '인사노무' || guideData.category === '인사·노무') && (
@@ -536,6 +599,7 @@ guide.get('/:id', async (c) => {
         .sidebar-item.active { background: rgba(255,255,255,0.15); }
         .law-link { background: rgba(59,130,246,0.08); padding: 1px 6px; border-radius: 4px; }
         .law-link:hover { background: rgba(59,130,246,0.15); }
+        .preview-fade { max-height: 200px; overflow: hidden; mask-image: linear-gradient(to bottom, black 40%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%); }
         .prose-bizready table { border-collapse: collapse; }
         .prose-bizready thead th { background: #f8fafc; font-weight: 600; color: #374151; padding: 8px 16px; border-bottom: 2px solid #e5e7eb; }
       `}</style>
