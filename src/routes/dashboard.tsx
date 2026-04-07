@@ -78,13 +78,6 @@ const categories = [
   { id: 'checklist',  icon: 'fa-clipboard-check',    color: 'bg-red-100 text-red-600',     title: '입사 체크리스트', desc: '첫 달 필수 처리 업무 목록',    count:  8 },
 ]
 
-const recentGuides = [
-  { category: '회계·세무', title: '세금계산서 발행 A to Z',         badge: 'HOT', badgeColor: 'bg-red-100 text-red-600'  },
-  { category: '인사·노무', title: '신규 직원 4대보험 가입 처리',    badge: 'NEW', badgeColor: 'bg-blue-100 text-blue-600' },
-  { category: '총무·행정', title: '법인카드 사용 및 정산 방법',     badge: '',    badgeColor: ''                           },
-  { category: '세금·신고', title: '부가세 신고 기간과 준비 서류',   badge: 'NEW', badgeColor: 'bg-blue-100 text-blue-600' },
-  { category: '급여관리',  title: '퇴직금 계산 방법과 지급 기준',  badge: '',    badgeColor: ''                           },
-]
 
 // D-day 계산 — 카테고리 스타일 포함
 function calcDday(deadlineStr: string, category: ScheduleCategory) {
@@ -153,6 +146,31 @@ dashboard.get('/', async (c) => {
     }
   } catch {
     ddayItems = []
+  }
+
+  // 최근 업데이트 가이드 조회
+  let recentGuides: any[] = []
+  try {
+    const adminDb = getSupabaseAdmin(c.env)
+    const { data: guideRows } = await adminDb
+      .from('guides')
+      .select('id, title, category, is_premium, updated_at')
+      .eq('status', 'published')
+      .order('updated_at', { ascending: false })
+      .limit(5)
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    recentGuides = (guideRows ?? []).map((g: any) => {
+      const isNew = g.updated_at && new Date(g.updated_at) > sevenDaysAgo
+      return {
+        id: g.id,
+        title: g.title,
+        category: g.category,
+        badge: isNew ? 'NEW' : (g.is_premium ? '💎' : ''),
+        badgeColor: isNew ? 'bg-blue-100 text-blue-600' : (g.is_premium ? 'bg-amber-100 text-amber-600' : ''),
+      }
+    })
+  } catch {
+    recentGuides = []
   }
 
   // 공지 고유 ID — 공지 내용 바꿀 때 이 값만 바꾸면 전체 재표시
@@ -335,7 +353,7 @@ dashboard.get('/', async (c) => {
                 {recentGuides.map((guide, i) => (
                   <div
                     class={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 cursor-pointer ${i < recentGuides.length - 1 ? 'border-b border-gray-100' : ''}`}
-                    onclick="window.location.href='/dashboard/archive'"
+                    onclick={`window.location.href='/dashboard/guide/${guide.id}'`}
                   >
                     <div class="flex-1">
                       <div class="flex items-center gap-2 mb-0.5">
