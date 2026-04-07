@@ -144,8 +144,8 @@ calendarRoute.get('/', async (c) => {
           </div>
 
           {/* FullCalendar */}
-          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <div id="calendar"></div>
+          <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-2 md:p-4 overflow-x-auto">
+            <div id="calendar" class="min-w-0"></div>
           </div>
 
           {/* 이번 달 주요 일정 요약 */}
@@ -253,6 +253,14 @@ calendarRoute.get('/', async (c) => {
         #calendar .fc-button-active { background: #1e3a8a !important; }
         #calendar .fc-today-button { background: #059669; border-color: #059669; }
         #calendar .fc-day-today { background: rgba(59,130,246,0.06) !important; }
+        @media (max-width: 767px) {
+          #calendar .fc-toolbar-title { font-size: 0.9rem; }
+          #calendar .fc-toolbar { flex-wrap: wrap; gap: 6px; }
+          #calendar .fc-button { padding: 0.25em 0.5em; font-size: 0.72rem; }
+          #calendar .fc-event { font-size: 10px; }
+          #calendar .fc-col-header-cell-cushion { font-size: 0.75rem; padding: 4px 2px; }
+          #calendar .fc-daygrid-day-number { font-size: 0.75rem; padding: 2px 4px; }
+        }
       `}</style>
 
       <script dangerouslySetInnerHTML={{ __html: `
@@ -303,15 +311,20 @@ function mapCustomToFC(e) {
 async function initCalendar() {
   await loadCustomEvents();
   const el = document.getElementById('calendar');
+  const isMobile = window.innerWidth < 768;
   calendar = new FullCalendar.Calendar(el, {
     locale: 'ko',
-    initialView: 'dayGridMonth',
-    headerToolbar: {
+    initialView: isMobile ? 'listMonth' : 'dayGridMonth',
+    headerToolbar: isMobile ? {
+      left:   'prev,next',
+      center: 'title',
+      right:  'today'
+    } : {
       left:   'prev,next today',
       center: 'title',
-      right:  'dayGridMonth,timeGridWeek,listMonth'
+      right:  'dayGridMonth,listMonth'
     },
-    buttonText: { today: '오늘', month: '월', week: '주', list: '목록' },
+    buttonText: { today: '오늘', month: '월', list: '목록' },
     events: customEvents.map(mapCustomToFC),
     eventClick: function(info) {
       showEventDetail(info.event);

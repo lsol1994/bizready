@@ -39,8 +39,8 @@ function isActive(currentPath: string, href: string): boolean {
 
 function menuCls(active: boolean): string {
   return active
-    ? 'sidebar-item active flex items-center gap-3 px-3 py-2.5 rounded-lg text-white text-sm cursor-pointer'
-    : 'sidebar-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer transition-all'
+    ? 'sidebar-item active flex items-center gap-3 px-3 py-3 rounded-lg text-white text-sm cursor-pointer min-h-[44px]'
+    : 'sidebar-item flex items-center gap-3 px-3 py-3 rounded-lg text-sky-200 hover:text-white text-sm cursor-pointer transition-all min-h-[44px]'
 }
 
 // ── 사이드바 내부 콘텐츠 (데스크탑 + 모바일 드로어 공용) ──
@@ -109,7 +109,7 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
             id={btnId}
             data-submenu={submenuId}
             data-chevron={chevronId}
-            class={`archive-accordion-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm cursor-pointer transition-all ${archiveOpen ? 'archive-btn-open text-white' : 'text-sky-200 hover:text-white'}`}
+            class={`archive-accordion-btn w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm cursor-pointer transition-all min-h-[44px] ${archiveOpen ? 'archive-btn-open text-white' : 'text-sky-200 hover:text-white'}`}
             type="button"
           >
             <i class="fas fa-book-open w-4 text-center text-sm flex-shrink-0 pointer-events-none"></i>
@@ -128,13 +128,13 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
                 <a
                   href={`/dashboard/archive?cat=${encodeURIComponent(sub.cat)}`}
                   onclick="closeMobileDrawer()"
-                  class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sky-300 hover:text-white hover:bg-white/10 transition-all"
+                  class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs text-sky-300 hover:text-white hover:bg-white/10 transition-all min-h-[40px]"
                 >
                   <i class={`fas ${sub.icon} w-3.5 text-center opacity-70`}></i>
                   <span>{sub.label}</span>
                 </a>
               ))}
-              <a href="/dashboard/archive" onclick="closeMobileDrawer()" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-sky-400 hover:text-white hover:bg-white/10 transition-all">
+              <a href="/dashboard/archive" onclick="closeMobileDrawer()" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs text-sky-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px]">
                 <i class="fas fa-th-large w-3.5 text-center opacity-70"></i>
                 <span>전체 보기</span>
               </a>
@@ -408,7 +408,7 @@ export function MobileMenuButton() {
   return (
     <button
       onclick="openMobileDrawer()"
-      class="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors mr-1"
+      class="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition-colors mr-1"
       aria-label="메뉴 열기"
       type="button"
     >
