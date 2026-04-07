@@ -236,19 +236,29 @@ salaryCalcRoute.get('/', async (c) => {
   // ════════════════════════════════════════════════════
   var INSURANCE_RATES = {
     2025: {
-      NP_EMPLOYEE: 0.045, NP_EMPLOYER: 0.045,
-      NP_MAX_BASE: 5900000, NP_MIN_BASE: 370000,
-      HI_EMPLOYEE: 0.03545, HI_EMPLOYER: 0.03545,
-      LTC_RATE: 0.1295,
-      EI_EMPLOYEE: 0.009, EI_EMPLOYER: 0.0115,
+      pension:    { employee: 0.045,   employer: 0.045,   ceiling: 6170000, floor: 390000 },
+      health:     { employee: 0.03545, employer: 0.03545 },
+      ltcRate:    0.1295,
+      employment: { employee: 0.009,   employer: 0.009 },
     },
     2026: {
-      NP_EMPLOYEE: 0.045, NP_EMPLOYER: 0.045,
-      NP_MAX_BASE: 6370000, NP_MIN_BASE: 390000,
-      HI_EMPLOYEE: 0.03545, HI_EMPLOYER: 0.03545,
-      LTC_RATE: 0.1295,
-      EI_EMPLOYEE: 0.009, EI_EMPLOYER: 0.0115,
+      pension:    { employee: 0.0475,  employer: 0.0475,  ceiling: 6370000, floor: 400000 },
+      health:     { employee: 0.03595, employer: 0.03595 },
+      ltcRate:    0.1314,
+      employment: { employee: 0.009,   employer: 0.009 },
     },
+  }
+
+  function getRates() {
+    var year = new Date().getFullYear()
+    var years = Object.keys(INSURANCE_RATES).map(Number).sort(function(a,b){ return b-a })
+    var key = years.find(function(y){ return y <= year })
+    if (key === undefined) key = years[0]
+    var r = INSURANCE_RATES[key]
+    return {
+      pension: r.pension, health: r.health, ltcRate: r.ltcRate, employment: r.employment,
+      year: key
+    }
   }
 
   // ════════════════════════════════════════════════════
@@ -284,12 +294,9 @@ salaryCalcRoute.get('/', async (c) => {
   var curMonth  = today.getMonth() + 1  // 1-12
   var curDay    = today.getDate()
 
-  // 4대보험: 1월 1일 기준 → 현재 연도 요율 사용
-  var insYears  = Object.keys(INSURANCE_RATES).map(Number).sort()
-  var insYear   = INSURANCE_RATES[curYear]
-    ? curYear
-    : insYears[insYears.length - 1]  // fallback: 가장 최신 연도
-  var RATES     = INSURANCE_RATES[insYear]
+  // 4대보험: getRates()로 현재 연도 기준 자동 선택
+  var r       = getRates()
+  var insYear = r.year
 
   // 소득세 간이세액표: 3월 31일 이후면 해당 연도, 이전이면 전년도
   var after331  = curMonth > 3 || (curMonth === 3 && curDay >= 31)
@@ -303,7 +310,7 @@ salaryCalcRoute.get('/', async (c) => {
   // ── 배너 & 배지 업데이트 ─────────────────────────
   document.getElementById('year-badge').textContent = insYear + '년 기준'
   document.getElementById('ins-basis-text').textContent =
-    insYear + '년 4대보험 요율 적용 중 (기준일: ' + insYear + '.01.01)'
+    '※ ' + insYear + '년 기준 요율 자동 적용 (기준일: ' + insYear + '.01.01)'
   document.getElementById('tax-basis-text').textContent =
     taxYear + '년 원천세 간이세액표 적용 중 (기준일: ' + taxYear + '.03.31)'
   document.getElementById('basis-banner').classList.remove('hidden')
@@ -363,22 +370,22 @@ salaryCalcRoute.get('/', async (c) => {
     }
 
     // ── 국민연금 ────────────────────────────────────
-    var npBase     = Math.min(Math.max(salary, RATES.NP_MIN_BASE), RATES.NP_MAX_BASE)
-    var npEmployee = round10(npBase * RATES.NP_EMPLOYEE)
-    var npEmployer = round10(npBase * RATES.NP_EMPLOYER)
-    var npCapped   = salary > RATES.NP_MAX_BASE
+    var npBase     = Math.min(Math.max(salary, r.pension.floor), r.pension.ceiling)
+    var npEmployee = round10(npBase * r.pension.employee)
+    var npEmployer = round10(npBase * r.pension.employer)
+    var npCapped   = salary > r.pension.ceiling
 
     // ── 건강보험 ────────────────────────────────────
-    var hiEmployee  = round10(salary * RATES.HI_EMPLOYEE)
-    var hiEmployer  = round10(salary * RATES.HI_EMPLOYER)
+    var hiEmployee  = Math.floor(salary * r.health.employee)
+    var hiEmployer  = Math.floor(salary * r.health.employer)
     // 장기요양 (건강보험료 합계 기준, 근로자/사업주 각 50%)
     var ltcBase     = hiEmployee + hiEmployer
-    var ltcEmployee = round10(ltcBase * RATES.LTC_RATE * 0.5)
-    var ltcEmployer = round10(ltcBase * RATES.LTC_RATE * 0.5)
+    var ltcEmployee = Math.floor(ltcBase * r.ltcRate * 0.5)
+    var ltcEmployer = Math.floor(ltcBase * r.ltcRate * 0.5)
 
     // ── 고용보험 ────────────────────────────────────
-    var eiEmployee = round10(salary * RATES.EI_EMPLOYEE)
-    var eiEmployer = round10(salary * RATES.EI_EMPLOYER)
+    var eiEmployee = Math.floor(salary * r.employment.employee)
+    var eiEmployer = Math.floor(salary * r.employment.employer)
 
     // ── 소득세 / 지방소득세 ─────────────────────────
     var incomeTax   = getIncomeTax(Math.max(0, salary - nonTaxable), 1 + dependents, 0)
@@ -392,10 +399,10 @@ salaryCalcRoute.get('/', async (c) => {
 
     // ── 렌더링: 근로자 공제표 ─────────────────────
     var empRows = [
-      ['국민연금', fmtPct(RATES.NP_EMPLOYEE) + (npCapped ? ' (상한 적용)' : ''), npEmployee],
-      ['건강보험', fmtPct(RATES.HI_EMPLOYEE), hiEmployee],
-      ['장기요양보험', '건보료 합계 × ' + (RATES.LTC_RATE * 100).toFixed(2) + '% × 50%', ltcEmployee],
-      ['고용보험', fmtPct(RATES.EI_EMPLOYEE), eiEmployee],
+      ['국민연금', fmtPct(r.pension.employee) + (npCapped ? ' (상한 적용)' : ''), npEmployee],
+      ['건강보험', fmtPct(r.health.employee), hiEmployee],
+      ['장기요양보험', '건보료 합계 × ' + (r.ltcRate * 100).toFixed(2) + '% × 50%', ltcEmployee],
+      ['고용보험', fmtPct(r.employment.employee), eiEmployee],
       ['소득세', taxYear + '년 간이세액표 기준', incomeTax],
       ['지방소득세', '소득세 × 10%', localTax],
     ]
@@ -409,10 +416,10 @@ salaryCalcRoute.get('/', async (c) => {
 
     // ── 렌더링: 사업주 부담표 ─────────────────────
     var emplRows = [
-      ['국민연금', fmtPct(RATES.NP_EMPLOYER) + (npCapped ? ' (상한 적용)' : ''), npEmployer],
-      ['건강보험', fmtPct(RATES.HI_EMPLOYER), hiEmployer],
-      ['장기요양보험', '건보료 합계 × ' + (RATES.LTC_RATE * 100).toFixed(2) + '% × 50%', ltcEmployer],
-      ['고용보험', fmtPct(RATES.EI_EMPLOYER) + ' (150인 미만)', eiEmployer],
+      ['국민연금', fmtPct(r.pension.employer) + (npCapped ? ' (상한 적용)' : ''), npEmployer],
+      ['건강보험', fmtPct(r.health.employer), hiEmployer],
+      ['장기요양보험', '건보료 합계 × ' + (r.ltcRate * 100).toFixed(2) + '% × 50%', ltcEmployer],
+      ['고용보험', fmtPct(r.employment.employer), eiEmployer],
       ['산재보험', '업종별 상이', null],
     ]
     document.getElementById('employer-table').innerHTML = emplRows.map(function(r) {
