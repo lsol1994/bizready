@@ -111,7 +111,7 @@ login.get('/', (c) => {
         </div>
 
         {/* 카드 */}
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
+        <div class="bg-white rounded-2xl shadow-2xl p-5 sm:p-8">
           <h2 class="text-xl font-bold text-gray-800 mb-1">시작하기</h2>
           <p class="text-gray-500 text-sm mb-6">계정으로 로그인하면 모든 업무 가이드에 접근할 수 있습니다</p>
 

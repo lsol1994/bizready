@@ -314,8 +314,8 @@ guide.get('/:id', async (c) => {
           <span class="text-gray-800 text-sm font-medium truncate max-w-xs">{guideData.title}</span>
         </header>
 
-        <div class="px-8 py-6 max-w-5xl">
-          <div class="flex gap-6">
+        <div class="px-4 md:px-8 py-4 md:py-6 max-w-5xl">
+          <div class="flex flex-col lg:flex-row gap-6">
             {/* 본문 (좌측) */}
             <article class="flex-1 min-w-0 space-y-5">
               {/* 가이드 헤더 카드 */}
@@ -532,9 +532,9 @@ guide.get('/:id', async (c) => {
             </article>
 
             {/* 우측 사이드바 */}
-            <aside class="w-64 flex-shrink-0 space-y-4">
+            <aside class="w-full lg:w-64 flex-shrink-0 space-y-4">
               {/* 메모 카드 */}
-              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm sticky top-20">
+              <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm lg:sticky lg:top-20">
                 <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2 text-sm">
                   <i class="fas fa-sticky-note text-yellow-500"></i> 내 메모
                 </h3>

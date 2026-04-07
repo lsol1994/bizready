@@ -83,11 +83,11 @@ payment.get('/', async (c) => {
           </div>
         </header>
 
-        <div class="px-4 md:px-8 py-8 max-w-4xl">
+        <div class="px-4 md:px-8 py-4 md:py-8 max-w-4xl w-full">
 
           {/* 이미 구독 중인 경우 */}
           {isPaid ? (
-            <div class="bg-green-50 border border-green-200 rounded-2xl p-8 text-center">
+            <div class="bg-green-50 border border-green-200 rounded-2xl p-5 sm:p-8 text-center">
               <div class="text-5xl mb-4">💎</div>
               <h2 class="text-2xl font-bold text-green-800 mb-2">프리미엄 구독 중</h2>
               <p class="text-green-600 mb-6">모든 콘텐츠를 자유롭게 이용하실 수 있습니다.</p>
@@ -114,7 +114,7 @@ payment.get('/', async (c) => {
               {/* 플랜 카드 */}
               <div class="grid md:grid-cols-2 gap-5 mb-8">
                 {PLANS.map((plan) => (
-                  <div class={`bg-white rounded-2xl border-2 p-6 relative ${plan.highlight ? 'border-blue-500 shadow-lg shadow-blue-100' : 'border-gray-100'}`}>
+                  <div class={`bg-white rounded-2xl border-2 p-4 sm:p-6 relative ${plan.highlight ? 'border-blue-500 shadow-lg shadow-blue-100' : 'border-gray-100'}`}>
                     {plan.badge && (
                       <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-4 py-1 rounded-full">
                         {plan.badge} 🔥
