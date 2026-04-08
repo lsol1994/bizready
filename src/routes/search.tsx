@@ -134,7 +134,7 @@ searchRoute.get('/', async (c) => {
         currentPath="/dashboard/search"
       />
 
-      <main class="flex-1 overflow-y-auto bg-gray-50">
+      <main class="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50">
 
         {/* ── 헤더 + 검색창 ── */}
         <header class="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-10 shadow-sm">
