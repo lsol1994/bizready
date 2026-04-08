@@ -3,7 +3,7 @@
 // ============================================================
 import { Hono } from 'hono'
 import { parseSessionCookie } from '../lib/session'
-import { getSupabaseClientWithToken } from '../lib/supabase'
+import { getSupabaseClientWithToken, getSupabaseAdmin } from '../lib/supabase'
 import { callAI } from '../lib/ai-chat'
 import type { ChatMessage } from '../lib/ai-chat'
 import type { Env } from '../lib/supabase'
@@ -58,7 +58,14 @@ chatApi.post('/', async (c) => {
 
   // ── 4. AI 스트리밍 호출 ───────────────────────────────
   try {
-    const stream = await callAI(messages, c.env)
+    let apiKey = c.env.GEMINI_API_KEY
+    if (!apiKey) {
+      const db = getSupabaseAdmin(c.env)
+      const { data } = await db.from('app_settings').select('value').eq('key', 'GEMINI_API_KEY').maybeSingle()
+      apiKey = (data as any)?.value ?? ''
+    }
+    if (!apiKey) return c.json({ ok: false, error: 'api_key_missing' }, 500)
+    const stream = await callAI(messages, { GEMINI_API_KEY: apiKey })
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
