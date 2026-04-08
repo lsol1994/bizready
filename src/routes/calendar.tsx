@@ -245,14 +245,91 @@ calendarRoute.get('/', async (c) => {
         .sidebar-item { transition: all 0.15s; }
         .sidebar-item:hover { background: rgba(255,255,255,0.1); }
         .sidebar-item.active { background: rgba(255,255,255,0.15); }
-        #calendar .fc-toolbar-title { font-size: 1.1rem; font-weight: 700; }
-        #calendar .fc-event { cursor: pointer; border-radius: 4px; font-size: 11px; }
-        #calendar .fc-daygrid-event { padding: 2px 4px; }
-        #calendar .fc-button { background: #1e40af; border-color: #1e40af; }
-        #calendar .fc-button:hover { background: #1d4ed8; }
-        #calendar .fc-button-active { background: #1e3a8a !important; }
-        #calendar .fc-today-button { background: #059669; border-color: #059669; }
-        #calendar .fc-day-today { background: rgba(59,130,246,0.06) !important; }
+
+        /* ── iOS 캘린더 스타일 ── */
+        #calendar .fc { background: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+        /* 헤더 */
+        #calendar .fc-toolbar-title { font-size: 18px; font-weight: 700; color: #1c1c1e; }
+        #calendar .fc-toolbar.fc-header-toolbar { margin-bottom: 8px; }
+        #calendar .fc-button-group { gap: 0; }
+        #calendar .fc-button, #calendar .fc-button-primary {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          color: #007aff !important;
+          font-size: 22px !important;
+          padding: 2px 10px !important;
+          line-height: 1 !important;
+        }
+        #calendar .fc-button:hover, #calendar .fc-button-primary:hover {
+          background: #f0f0f0 !important;
+          border-radius: 6px !important;
+        }
+        #calendar .fc-button:focus, #calendar .fc-button-primary:focus {
+          box-shadow: none !important;
+        }
+
+        /* 요일 헤더 */
+        #calendar .fc-col-header-cell { padding: 6px 0; border: none !important; }
+        #calendar .fc-col-header-cell-cushion {
+          font-size: 12px; font-weight: 400; color: #8e8e93;
+          text-decoration: none !important;
+        }
+        #calendar .fc-col-header-cell.fc-day-sun .fc-col-header-cell-cushion { color: #ff3b30; }
+        #calendar .fc-col-header-cell.fc-day-sat .fc-col-header-cell-cushion { color: #007aff; }
+
+        /* 날짜 숫자 */
+        #calendar .fc-daygrid-day-number {
+          font-size: 16px; font-weight: 400; color: #1c1c1e;
+          padding: 4px 8px; text-decoration: none !important;
+        }
+        #calendar .fc-day-sun .fc-daygrid-day-number { color: #ff3b30; }
+        #calendar .fc-day-sat .fc-daygrid-day-number { color: #007aff; }
+
+        /* 오늘 날짜 */
+        #calendar .fc-day-today { background: transparent !important; }
+        #calendar .fc-day-today .fc-daygrid-day-number {
+          background: #ff3b30 !important;
+          color: #fff !important;
+          border-radius: 50% !important;
+          width: 28px !important; height: 28px !important;
+          display: flex !important; align-items: center !important; justify-content: center !important;
+          padding: 0 !important;
+          margin: 2px !important;
+        }
+
+        /* 이벤트 */
+        #calendar .fc-event {
+          cursor: pointer;
+          border: none !important;
+          border-radius: 4px !important;
+          padding: 1px 4px !important;
+          font-size: 11px !important;
+        }
+        #calendar .fc-event-title {
+          font-weight: 500;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        #calendar .fc-daygrid-event-dot { display: none !important; }
+
+        /* +N개 더보기 */
+        #calendar .fc-daygrid-more-link { font-size: 11px; color: #8e8e93; }
+
+        /* 셀 경계선 */
+        #calendar .fc td, #calendar .fc th { border-color: #e5e5ea !important; }
+        #calendar .fc-scrollgrid { border-color: #e5e5ea !important; }
+
+        /* 모바일 */
+        @media (max-width: 768px) {
+          #calendar .fc-toolbar-title { font-size: 15px; }
+          #calendar .fc-daygrid-day-number { font-size: 14px; padding: 2px 6px; }
+          #calendar .fc-event { font-size: 10px !important; }
+          #calendar .fc-day-today .fc-daygrid-day-number { width: 24px !important; height: 24px !important; }
+          #calendar .fc-button, #calendar .fc-button-primary { font-size: 18px !important; padding: 2px 6px !important; }
+        }
       `}</style>
 
       <script dangerouslySetInnerHTML={{ __html: `
@@ -307,11 +384,15 @@ async function initCalendar() {
     locale: 'ko',
     initialView: 'dayGridMonth',
     headerToolbar: {
-      left:   'prev,next today',
+      left:   'prev',
       center: 'title',
-      right:  'dayGridMonth,timeGridWeek,listMonth'
+      right:  'next'
     },
-    buttonText: { today: '오늘', month: '월', week: '주', list: '목록' },
+    height: 'auto',
+    fixedWeekCount: false,
+    showNonCurrentDates: false,
+    dayMaxEvents: 3,
+    moreLinkText: function(n) { return '+' + n + '개'; },
     events: customEvents.map(mapCustomToFC),
     eventClick: function(info) {
       showEventDetail(info.event);
