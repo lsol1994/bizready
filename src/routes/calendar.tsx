@@ -163,14 +163,14 @@ calendarRoute.get('/', async (c) => {
         </div>
       </main>
 
-      {/* ── 일정 추가/수정 모달 (관리자 전용) ── */}
+      {/* ── 일정 추가/수정 모달 ── */}
       <div id="add-event-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[92vh]">
+          <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
             <h3 id="event-modal-title" class="font-bold text-gray-800">일정 추가</h3>
             <button onclick="closeAddEventModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
           </div>
-          <div class="p-6 space-y-4">
+          <div class="p-6 space-y-4 overflow-y-auto flex-1">
             <input type="hidden" id="ev-edit-id" value="" />
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">일정 제목 <span class="text-red-500">*</span></label>
@@ -183,7 +183,7 @@ calendarRoute.get('/', async (c) => {
                 <input id="ev-start" type="date"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <div>
+              <div id="ev-end-wrap">
                 <label class="block text-sm font-medium text-gray-700 mb-1">종료일</label>
                 <input id="ev-end" type="date"
                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -205,9 +205,90 @@ calendarRoute.get('/', async (c) => {
               <textarea id="ev-note" rows={2} placeholder="상세 설명 (선택)"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
             </div>
+
+            {/* ── 반복 유형 ── */}
+            <div id="ev-recurring-wrap">
+              <label class="block text-sm font-medium text-gray-700 mb-1">반복 유형</label>
+              <select id="ev-recurring-type" onchange="toggleRecurring()"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="none">반복 없음</option>
+                <option value="weekly">매주 반복</option>
+                <option value="monthly">매월 반복</option>
+                <option value="yearly">매년 반복</option>
+              </select>
+            </div>
+
+            {/* 매주 패널 */}
+            <div id="ev-recurring-weekly" class="hidden bg-blue-50 rounded-xl p-4 space-y-3 border border-blue-100">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-2">반복 요일 (다중 선택)</label>
+                <div class="flex flex-wrap gap-2">
+                  {[{v:0,l:'일'},{v:1,l:'월'},{v:2,l:'화'},{v:3,l:'수'},{v:4,l:'목'},{v:5,l:'금'},{v:6,l:'토'}].map(d => (
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" id={`ev-weekday-${d.v}`} value={String(d.v)}
+                        class="rounded border-gray-300 text-blue-600" />
+                      <span class={`text-sm font-medium ${d.v === 0 ? 'text-red-500' : d.v === 6 ? 'text-blue-600' : 'text-gray-700'}`}>{d.l}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">종료 날짜 <span class="text-red-500">*</span></label>
+                <input id="ev-recurring-until" type="date"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+            </div>
+
+            {/* 매월 패널 */}
+            <div id="ev-recurring-monthly" class="hidden bg-blue-50 rounded-xl p-4 space-y-3 border border-blue-100">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">기준일 (1~31) <span class="text-red-500">*</span></label>
+                <input id="ev-recurring-day" type="number" min="1" max="31" placeholder="10"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">종료 날짜 <span class="text-red-500">*</span></label>
+                <input id="ev-recurring-month-until" type="date"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="ev-skip-weekend" class="rounded border-gray-300 text-blue-600" />
+                <span class="text-xs text-gray-600">주말이면 다음 월요일로 자동 이동</span>
+              </label>
+            </div>
+
+            {/* 매년 패널 */}
+            <div id="ev-recurring-yearly" class="hidden bg-blue-50 rounded-xl p-4 space-y-3 border border-blue-100">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">기준 월 <span class="text-red-500">*</span></label>
+                  <select id="ev-recurring-month"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    {['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'].map((m, i) => (
+                      <option value={String(i)}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">기준 일 <span class="text-red-500">*</span></label>
+                  <input id="ev-recurring-year-day" type="number" min="1" max="31" placeholder="31"
+                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">종료 연도 <span class="text-red-500">*</span></label>
+                <input id="ev-recurring-end-year" type="number" min="2025" max="2035"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="ev-skip-weekend-yearly" class="rounded border-gray-300 text-blue-600" />
+                <span class="text-xs text-gray-600">주말이면 다음 월요일로 자동 이동</span>
+              </label>
+            </div>
+
             <div id="ev-error" class="hidden text-red-500 text-sm bg-red-50 p-2 rounded-lg"></div>
           </div>
-          <div class="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
+          <div class="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end flex-shrink-0">
             <button onclick="closeAddEventModal()" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">취소</button>
             <button onclick="saveEvent()" id="save-ev-btn"
               class="px-5 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2">
@@ -529,6 +610,33 @@ function closeEventDetail() {
   document.getElementById('event-detail-modal').classList.add('hidden');
 }
 
+// ── 반복 유형 토글 ────────────────────────────────
+function toggleRecurring() {
+  const type = document.getElementById('ev-recurring-type').value;
+  document.getElementById('ev-recurring-weekly').classList.toggle('hidden', type !== 'weekly');
+  document.getElementById('ev-recurring-monthly').classList.toggle('hidden', type !== 'monthly');
+  document.getElementById('ev-recurring-yearly').classList.toggle('hidden', type !== 'yearly');
+  // 반복 시 종료일 숨김
+  document.getElementById('ev-end-wrap').classList.toggle('hidden', type !== 'none');
+}
+
+function resetRecurringFields() {
+  document.getElementById('ev-recurring-type').value = 'none';
+  toggleRecurring();
+  [0,1,2,3,4,5,6].forEach(function(d) {
+    const cb = document.getElementById('ev-weekday-' + d);
+    if (cb) cb.checked = false;
+  });
+  document.getElementById('ev-recurring-until').value       = '';
+  document.getElementById('ev-recurring-day').value         = '';
+  document.getElementById('ev-recurring-month-until').value = '';
+  document.getElementById('ev-skip-weekend').checked        = false;
+  document.getElementById('ev-recurring-month').value       = '0';
+  document.getElementById('ev-recurring-year-day').value    = '';
+  document.getElementById('ev-recurring-end-year').value    = String(new Date().getFullYear() + 1);
+  document.getElementById('ev-skip-weekend-yearly').checked = false;
+}
+
 // ── 일정 추가 모달 ────────────────────────────────
 function openAddEventModal() {
   document.getElementById('ev-edit-id').value = '';
@@ -536,20 +644,18 @@ function openAddEventModal() {
   document.getElementById('ev-title').value    = '';
   document.getElementById('ev-start').value    = new Date().toISOString().split('T')[0];
   document.getElementById('ev-end').value      = '';
-  // 비관리자는 기본 분류를 general로 (finance/labor는 제한)
   document.getElementById('ev-category').value = IS_ADMIN ? 'company' : 'general';
-  // 비관리자는 finance/labor 옵션 비활성화
   Array.from(document.querySelectorAll('#ev-category option')).forEach(function(opt) {
     const val = opt.value;
     if (!IS_ADMIN && ADMIN_ONLY_CATS.includes(val)) {
-      opt.disabled = true;
-      opt.style.color = '#9ca3af';
+      opt.disabled = true; opt.style.color = '#9ca3af';
     } else {
-      opt.disabled = false;
-      opt.style.color = '';
+      opt.disabled = false; opt.style.color = '';
     }
   });
-  document.getElementById('ev-note').value     = '';
+  document.getElementById('ev-note').value = '';
+  resetRecurringFields();
+  document.getElementById('ev-recurring-wrap').classList.remove('hidden');
   document.getElementById('ev-error').classList.add('hidden');
   const btn = document.getElementById('save-ev-btn');
   btn.innerHTML = '<i class="fas fa-save"></i>저장';
@@ -564,6 +670,9 @@ function openEditEventModal(event) {
   document.getElementById('ev-end').value      = event.endStr ? event.endStr.split('T')[0] : '';
   document.getElementById('ev-category').value = event.extendedProps.category || 'company';
   document.getElementById('ev-note').value     = event.extendedProps.note || '';
+  // 수정 시 반복 UI 숨김 (단건 수정만 지원)
+  resetRecurringFields();
+  document.getElementById('ev-recurring-wrap').classList.add('hidden');
   document.getElementById('ev-error').classList.add('hidden');
   const btn = document.getElementById('save-ev-btn');
   btn.innerHTML = '<i class="fas fa-save"></i>수정';
@@ -587,25 +696,59 @@ async function saveEvent() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...';
   btn.disabled  = true;
 
+  const recurringType = document.getElementById('ev-recurring-type').value;
   const payload = {
     title,
-    start_date: start,
-    end_date:   document.getElementById('ev-end').value || null,
-    category:   document.getElementById('ev-category').value,
-    note:       document.getElementById('ev-note').value.trim(),
+    start_date:     start,
+    end_date:       document.getElementById('ev-end').value || null,
+    category:       document.getElementById('ev-category').value,
+    note:           document.getElementById('ev-note').value.trim(),
+    recurring_type: recurringType,
   };
+
+  // 반복 파라미터 수집
+  if (recurringType === 'weekly') {
+    payload.recurring_weekdays = [0,1,2,3,4,5,6].filter(function(d) {
+      const cb = document.getElementById('ev-weekday-' + d);
+      return cb && cb.checked;
+    });
+    payload.recurring_until = document.getElementById('ev-recurring-until').value;
+    if (!payload.recurring_until) {
+      errEl.textContent = '종료 날짜를 선택해주세요.'; errEl.classList.remove('hidden');
+      btn.innerHTML = '<i class="fas fa-save"></i>저장'; btn.disabled = false; return;
+    }
+    if (payload.recurring_weekdays.length === 0) {
+      errEl.textContent = '반복 요일을 선택해주세요.'; errEl.classList.remove('hidden');
+      btn.innerHTML = '<i class="fas fa-save"></i>저장'; btn.disabled = false; return;
+    }
+  } else if (recurringType === 'monthly') {
+    payload.recurring_day   = parseInt(document.getElementById('ev-recurring-day').value);
+    payload.recurring_until = document.getElementById('ev-recurring-month-until').value;
+    payload.skip_weekend    = document.getElementById('ev-skip-weekend').checked;
+    if (!payload.recurring_day || !payload.recurring_until) {
+      errEl.textContent = '기준일과 종료 날짜를 입력해주세요.'; errEl.classList.remove('hidden');
+      btn.innerHTML = '<i class="fas fa-save"></i>저장'; btn.disabled = false; return;
+    }
+  } else if (recurringType === 'yearly') {
+    payload.recurring_month    = parseInt(document.getElementById('ev-recurring-month').value);
+    payload.recurring_day      = parseInt(document.getElementById('ev-recurring-year-day').value);
+    payload.recurring_end_year = parseInt(document.getElementById('ev-recurring-end-year').value);
+    payload.skip_weekend       = document.getElementById('ev-skip-weekend-yearly').checked;
+    if (!payload.recurring_day || !payload.recurring_end_year) {
+      errEl.textContent = '기준일과 종료 연도를 입력해주세요.'; errEl.classList.remove('hidden');
+      btn.innerHTML = '<i class="fas fa-save"></i>저장'; btn.disabled = false; return;
+    }
+  }
 
   let res;
   if (editId) {
     res = await fetch('/dashboard/calendar/api/events/' + editId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
   } else {
     res = await fetch('/dashboard/calendar/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
   }
@@ -613,38 +756,42 @@ async function saveEvent() {
 
   if (data.ok) {
     closeAddEventModal();
-    const cat   = payload.category;
-    const color = CAT_COLORS[cat] || '#3b82f6';
 
-    if (editId) {
-      // 기존 이벤트 업데이트
-      const existing = calendar.getEventById(String(editId));
-      if (existing) {
-        existing.setProp('title',  payload.title);
-        existing.setProp('color',  color);
-        existing.setStart(payload.start_date);
-        existing.setEnd(payload.end_date || null);
-        existing.setExtendedProp('note',     payload.note);
-        existing.setExtendedProp('category', cat);
-      }
+    // 반복 일정: 다건 생성 → 전체 리로드
+    if (data.count && data.count > 1) {
+      alert(data.message);
+      await loadCustomEvents();
+      calendar.removeAllEvents();
+      customEvents.map(mapCustomToFC).forEach(function(e) { calendar.addEvent(e); });
     } else {
-      // 새 이벤트 즉시 추가
-      calendar.addEvent({
-        id:    String(data.id),
-        title: payload.title,
-        start: payload.start_date,
-        end:   payload.end_date || null,
-        color,
-        extendedProps: { note: payload.note, category: cat, isLegal: false, dbId: data.id }
-      });
+      const cat   = payload.category;
+      const color = CAT_COLORS[cat] || '#3b82f6';
+      if (editId) {
+        const existing = calendar.getEventById(String(editId));
+        if (existing) {
+          existing.setProp('title',  payload.title);
+          existing.setProp('color',  color);
+          existing.setStart(payload.start_date);
+          existing.setEnd(payload.end_date || null);
+          existing.setExtendedProp('note',     payload.note);
+          existing.setExtendedProp('category', cat);
+        }
+      } else {
+        calendar.addEvent({
+          id:    String(data.id),
+          title: payload.title,
+          start: payload.start_date,
+          end:   payload.end_date || null,
+          color,
+          extendedProps: { note: payload.note, category: cat, isLegal: false, dbId: data.id }
+        });
+      }
     }
-
-    // 목록 패널 즉시 갱신
     updateUpcomingList(calendar.view.activeStart, calendar.view.activeEnd);
   } else {
     errEl.textContent = '저장 실패: ' + (data.error || '알 수 없는 오류');
     errEl.classList.remove('hidden');
-    btn.innerHTML = '<i class="fas fa-save"></i> 저장';
+    btn.innerHTML = '<i class="fas fa-save"></i>저장';
     btn.disabled  = false;
   }
 }
@@ -670,6 +817,61 @@ document.addEventListener('DOMContentLoaded', initCalendar);
     { title: '사내 주요 일정 | BizReady' }
   )
 })
+
+// ── 반복 일정 날짜 생성 헬퍼 ──────────────────────────────
+function adjustWeekend(date: Date, skip: boolean): Date {
+  if (!skip) return date
+  const dow = date.getDay()
+  if (dow === 6) date.setDate(date.getDate() + 2)
+  else if (dow === 0) date.setDate(date.getDate() + 1)
+  return date
+}
+
+function generateWeekly(start: Date, end: Date, weekdays: number[]): Date[] {
+  const dates: Date[] = []
+  const cur = new Date(start)
+  while (cur <= end) {
+    if (weekdays.includes(cur.getDay())) dates.push(new Date(cur))
+    cur.setDate(cur.getDate() + 1)
+  }
+  return dates
+}
+
+function generateMonthly(
+  startYear: number, startMonth: number,
+  endYear: number, endMonth: number,
+  day: number, skipWeekend: boolean
+): Date[] {
+  const dates: Date[] = []
+  let y = startYear, m = startMonth
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    let d = new Date(y, m, day)
+    if (d.getMonth() !== m) d = new Date(y, m + 1, 0)
+    dates.push(adjustWeekend(new Date(d), skipWeekend))
+    m++; if (m > 11) { m = 0; y++ }
+  }
+  return dates
+}
+
+function generateYearly(
+  startYear: number, endYear: number,
+  month: number, day: number, skipWeekend: boolean
+): Date[] {
+  const dates: Date[] = []
+  for (let y = startYear; y <= endYear; y++) {
+    let d = new Date(y, month, day)
+    if (d.getMonth() !== month) d = new Date(y, month + 1, 0)
+    dates.push(adjustWeekend(new Date(d), skipWeekend))
+  }
+  return dates
+}
+
+function toDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const mo = String(d.getMonth() + 1).padStart(2, '0')
+  const da = String(d.getDate()).padStart(2, '0')
+  return `${y}-${mo}-${da}`
+}
 
 // ── 캘린더 이벤트 API ──────────────────────────────────
 // GET /dashboard/calendar/api/events
@@ -712,6 +914,67 @@ calendarRoute.post('/api/events', async (c) => {
     }
 
     const db = getSupabaseAdmin(c.env)
+    const recurringType: string = body.recurring_type ?? 'none'
+
+    // ── 반복 일정 처리 ──
+    if (recurringType !== 'none') {
+      const startDate = new Date(body.start_date)
+      const DAY_NAMES = ['일','월','화','수','목','금','토']
+      const MONTH_NAMES = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월']
+      let dates: Date[] = []
+      let descLabel = ''
+
+      if (recurringType === 'weekly') {
+        const weekdays: number[] = body.recurring_weekdays ?? []
+        if (weekdays.length === 0) return c.json({ ok: false, error: '반복 요일을 선택해주세요.' }, 400)
+        if (!body.recurring_until) return c.json({ ok: false, error: '종료 날짜를 선택해주세요.' }, 400)
+        dates = generateWeekly(startDate, new Date(body.recurring_until), weekdays)
+        descLabel = '매주 ' + weekdays.map((d: number) => DAY_NAMES[d]).join('/')
+
+      } else if (recurringType === 'monthly') {
+        const day = Number(body.recurring_day ?? 1)
+        if (!body.recurring_until) return c.json({ ok: false, error: '종료 날짜를 선택해주세요.' }, 400)
+        const until = new Date(body.recurring_until)
+        dates = generateMonthly(
+          startDate.getFullYear(), startDate.getMonth(),
+          until.getFullYear(), until.getMonth(),
+          day, body.skip_weekend ?? false
+        )
+        descLabel = `매월 ${day}일` + (body.skip_weekend ? ' (주말→월)' : '')
+
+      } else if (recurringType === 'yearly') {
+        const month = Number(body.recurring_month ?? 0)
+        const day   = Number(body.recurring_day ?? 1)
+        const endYear = Number(body.recurring_end_year ?? startDate.getFullYear())
+        dates = generateYearly(startDate.getFullYear(), endYear, month, day, body.skip_weekend ?? false)
+        descLabel = `매년 ${MONTH_NAMES[month]} ${day}일` + (body.skip_weekend ? ' (주말→월)' : '')
+      }
+
+      if (dates.length === 0) return c.json({ ok: false, error: '생성할 날짜가 없습니다.' }, 400)
+      if (dates.length > 500) return c.json({ ok: false, error: '최대 500개까지 생성 가능합니다.' }, 400)
+
+      const rows = dates.map(d => ({
+        title:      body.title.trim(),
+        start_date: toDateStr(d),
+        end_date:   null,
+        category:   body.category || 'company',
+        note:       body.note || '',
+        created_by: user.email,
+      }))
+
+      const { data: inserted, error: insErr } = await db.from('calendar_events').insert(rows).select('id')
+      if (insErr) return c.json({ ok: false, error: insErr.message }, 500)
+
+      const count = inserted?.length ?? 0
+      return c.json({
+        ok: true,
+        count,
+        ids: inserted?.map((r: any) => r.id) ?? [],
+        message: `총 ${count}개의 반복 일정이 추가되었습니다. (${descLabel})`
+      })
+    }
+
+    // ── 단일 일정 ──
     const { data, error } = await db.from('calendar_events').insert({
       title:      body.title.trim(),
       start_date: body.start_date,
