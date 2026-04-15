@@ -171,14 +171,6 @@ function SidebarContent({ userName, userInitial, isPaid, currentPath, sidebarId 
           <span>내 메모</span>
         </a>
 
-        <a href="/dashboard/chat" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/chat'))}>
-          <i class="fas fa-robot w-4 text-center text-sm"></i>
-          <span>AI 챗봇</span>
-          {!isPaid && (
-            <span class="ml-auto text-xs bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded-full font-medium">PRO</span>
-          )}
-        </a>
-
         <a href="/dashboard/leave-calculator" onclick="closeMobileDrawer()" class={menuCls(isActive(currentPath, '/dashboard/leave-calculator'))}>
           <i class="fas fa-calendar-check w-4 text-center text-sm"></i>
           <span>연차 계산기</span>
