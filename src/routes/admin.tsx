@@ -34,13 +34,12 @@ adminRoute.get('/', async (c) => {
 
   const db = getSupabaseAdmin(c.env)
 
-  const [guidesRes, usersRes, profilesRes, paymentsRes, noticesRes, settingsRes] = await Promise.all([
+  const [guidesRes, usersRes, profilesRes, paymentsRes, noticesRes] = await Promise.all([
     db.from('guides').select('id,title,category,subcategory,summary,is_premium,status,updated_at,view_count,file_url_1,file_url_2,file_url_3,file_name_1,file_name_2,file_name_3').order('created_at', { ascending: false }),
     db.auth.admin.listUsers(),
     db.from('user_profiles').select('*'),
     db.from('payment_logs').select('*').order('created_at', { ascending: false }),
     db.from('announcements').select('*').order('created_at', { ascending: false }),
-    db.from('app_settings').select('value').eq('key', 'GEMINI_API_KEY').maybeSingle(),
   ])
 
   const guides         = guidesRes.data ?? []
@@ -50,10 +49,6 @@ adminRoute.get('/', async (c) => {
   const payments       = paymentsRes.data ?? []
   const notices        = noticesRes.data ?? []
   const noticesMissing = !!noticesRes.error
-  const savedApiKey    = (settingsRes.data as any)?.value ?? ''
-  const maskedApiKey   = savedApiKey.length > 10
-    ? savedApiKey.slice(0, 10) + '●●●●●●'
-    : (savedApiKey ? '●●●●●●' : '')
 
   // ── 통계 계산 ───────────────────────────────────────────
   const totalUsers   = users.length
@@ -565,57 +560,7 @@ create policy "authenticated users can read public announcements"
             <div class="px-6 py-4 border-b border-gray-100">
               <h2 class="font-bold text-gray-800 text-lg"><i class="fas fa-cog mr-2 text-gray-500"></i>설정</h2>
             </div>
-            <div class="p-6 max-w-xl space-y-8">
-              <div>
-                <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                  <i class="fas fa-robot text-indigo-500"></i>AI 챗봇 설정
-                </h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
-                    <div class="relative">
-                      <input
-                        id="api-key-input"
-                        type="password"
-                        placeholder={maskedApiKey || 'AIza...를 입력하세요'}
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onclick="toggleKeyVisibility()"
-                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <i id="eye-icon" class="fas fa-eye text-sm"></i>
-                      </button>
-                    </div>
-                    {maskedApiKey && (
-                      <p class="text-xs text-gray-400 mt-1">현재 저장된 키: {maskedApiKey}</p>
-                    )}
-                    <div id="api-key-result" class="hidden mt-2 text-sm p-2 rounded-lg"></div>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onclick="saveApiKey()"
-                      id="api-key-save-btn"
-                      class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                    >
-                      <i class="fas fa-save"></i>저장
-                    </button>
-                    <button
-                      type="button"
-                      onclick="testApiKey()"
-                      id="api-key-test-btn"
-                      class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                    >
-                      <i class="fas fa-flask"></i>키 유효성 테스트
-                    </button>
-                  </div>
-                  <p class="text-xs text-gray-400">
-                    <i class="fas fa-info-circle mr-1"></i>Cloudflare 환경변수(GEMINI_API_KEY)가 설정된 경우 환경변수가 우선 적용됩니다. 환경변수가 없을 때 이곳에 저장된 키가 사용됩니다.
-                  </p>
-                </div>
-              </div>
+            <div class="p-6 max-w-xl">
             </div>
           </div>
         </div>
@@ -1212,63 +1157,6 @@ create policy "authenticated users can read public announcements"
         function downloadUsersCSV()    { window.location.href = '/admin/api/export/users' }
         function downloadPaymentsCSV() { window.location.href = '/admin/api/export/payments' }
 
-        // ── API 키 설정 ──────────────────────────────────────
-        function toggleKeyVisibility() {
-          var input = document.getElementById('api-key-input')
-          var icon = document.getElementById('eye-icon')
-          if (input.type === 'password') {
-            input.type = 'text'
-            icon.className = 'fas fa-eye-slash text-sm'
-          } else {
-            input.type = 'password'
-            icon.className = 'fas fa-eye text-sm'
-          }
-        }
-        async function saveApiKey() {
-          var key = document.getElementById('api-key-input').value.trim()
-          if (!key) { alert('API 키를 입력하세요.'); return }
-          var btn = document.getElementById('api-key-save-btn')
-          var result = document.getElementById('api-key-result')
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 저장 중...'
-          btn.disabled = true
-          var res = await fetch('/admin/api/settings/api-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: key })
-          })
-          var data = await res.json()
-          result.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700')
-          if (data.ok) {
-            result.classList.add('bg-green-50', 'text-green-700')
-            result.textContent = '✅ 저장되었습니다.'
-            setTimeout(function() { location.reload() }, 1200)
-          } else {
-            result.classList.add('bg-red-50', 'text-red-700')
-            result.textContent = '❌ 저장 실패: ' + (data.error || '알 수 없는 오류')
-            btn.innerHTML = '<i class="fas fa-save"></i> 저장'
-            btn.disabled = false
-          }
-        }
-        async function testApiKey() {
-          var key = document.getElementById('api-key-input').value.trim()
-          if (!key) { alert('먼저 API 키를 입력하세요.'); return }
-          var btn = document.getElementById('api-key-test-btn')
-          var result = document.getElementById('api-key-result')
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 테스트 중...'
-          btn.disabled = true
-          var res = await fetch('/admin/api/settings/test-api-key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ key: key })
-          })
-          var data = await res.json()
-          result.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700')
-          result.classList.add(data.ok ? 'bg-green-50' : 'bg-red-50', data.ok ? 'text-green-700' : 'text-red-700')
-          result.textContent = data.ok ? '✅ 유효한 API 키입니다.' : '❌ 유효하지 않은 키: ' + (data.error || '알 수 없는 오류')
-          btn.innerHTML = '<i class="fas fa-flask"></i> 키 유효성 테스트'
-          btn.disabled = false
-        }
-
         // ── 초기화 ──────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', function() { updateSubcategory('') })
       `}}></script>
@@ -1530,55 +1418,6 @@ adminRoute.get('/api/export/payments', async (c) => {
   c.header('Content-Type', 'text/csv; charset=utf-8')
   c.header('Content-Disposition', `attachment; filename="bizready_payments_${new Date().toISOString().slice(0,10)}.csv"`)
   return c.body(csv)
-})
-
-// ═══════════════════════════════════════════════════════════
-//  API: 설정 - Gemini API 키 저장
-// ═══════════════════════════════════════════════════════════
-adminRoute.post('/api/settings/api-key', async (c) => {
-  const auth = await requireAdmin(c)
-  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401)
-
-  const body = await c.req.json<{ key: string }>()
-  if (!body.key?.trim()) return c.json({ ok: false, error: 'key required' }, 400)
-
-  const db = getSupabaseAdmin(c.env)
-  const { error } = await db.from('app_settings').upsert(
-    { key: 'GEMINI_API_KEY', value: body.key.trim(), updated_at: new Date().toISOString() },
-    { onConflict: 'key' }
-  )
-  if (error) return c.json({ ok: false, error: error.message }, 500)
-  return c.json({ ok: true })
-})
-
-// ═══════════════════════════════════════════════════════════
-//  API: 설정 - Gemini API 키 유효성 테스트
-// ═══════════════════════════════════════════════════════════
-adminRoute.post('/api/settings/test-api-key', async (c) => {
-  const auth = await requireAdmin(c)
-  if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401)
-
-  const body = await c.req.json<{ key: string }>()
-  if (!body.key?.trim()) return c.json({ ok: false, error: 'key required' }, 400)
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${body.key.trim()}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
-        generationConfig: { maxOutputTokens: 5 },
-      }),
-    })
-    if (!res.ok) {
-      const errText = await res.text()
-      return c.json({ ok: false, error: `HTTP ${res.status}: ${errText.slice(0, 120)}` })
-    }
-    return c.json({ ok: true })
-  } catch (e: any) {
-    return c.json({ ok: false, error: e.message })
-  }
 })
 
 export default adminRoute
